@@ -3,10 +3,11 @@ import { defineConfig } from 'prisma/config';
 
 export default defineConfig({
   earlyAccess: true,
-  schema: path.join(__dirname, 'schema.prisma'),
-  migrate: {
-    async resolve({ datasourceUrl }) {
-      return process.env.DATABASE_URL || datasourceUrl || '';
-    },
+  schema: path.join(import.meta.dirname, 'schema.prisma'),
+  migrations: {
+    path: path.join(import.meta.dirname, 'migrations'),
+  },
+  datasource: {
+    url: process.env.DATABASE_URL!,
   },
 });
