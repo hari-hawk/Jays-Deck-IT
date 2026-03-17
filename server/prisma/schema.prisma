@@ -1,0 +1,413 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── ENUMS ──────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  IT_ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  OFFBOARDED
+}
+
+enum Location {
+  USA
+  INDIA
+  UAE
+  UK
+  CANADA
+  AUSTRALIA
+  BANGLADESH
+}
+
+enum AssetCategory {
+  LAPTOP
+  DESKTOP
+  MONITOR
+  KEYBOARD
+  MOUSE
+  HEADSET
+  PHONE
+  TABLET
+  SERVER
+  NETWORKING
+  PRINTER
+  SOFTWARE_LICENSE
+  OTHER
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ASSIGNED
+  IN_MAINTENANCE
+  RETIRED
+  LOST
+  DISPOSED
+}
+
+enum AssetCondition {
+  NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum AccessLevel {
+  READ
+  WRITE
+  ADMIN
+  FULL
+}
+
+enum AccessStatus {
+  ACTIVE
+  REVOKED
+  PENDING_REVIEW
+  EXPIRED
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  REVOKED
+}
+
+enum TicketCategory {
+  HARDWARE
+  SOFTWARE
+  NETWORK
+  ACCESS_REQUEST
+  SECURITY
+  GENERAL_IT
+  FACILITIES
+  OTHER
+}
+
+enum TicketPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TicketStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  ON_HOLD
+  RESOLVED
+  CLOSED
+  ESCALATED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  ASSIGN
+  UNASSIGN
+  APPROVE
+  DENY
+  LOGIN
+  LOGOUT
+  EXPORT
+}
+
+enum NotificationType {
+  TICKET_UPDATE
+  ASSET_ASSIGNED
+  ACCESS_GRANTED
+  SLA_WARNING
+  SYSTEM
+}
+
+// ─── MODELS ──────────────────────────────────────────
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  avatarUrl    String?
+  role         Role       @default(EMPLOYEE)
+  department   String?
+  designation  String?
+  employeeId   String     @unique
+  phone        String?
+  location     Location   @default(USA)
+  dateOfJoining DateTime?
+  status       UserStatus @default(ACTIVE)
+
+  managerId String?
+  manager   User?   @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  subordinates User[] @relation("ManagerSubordinates")
+
+  assignedAssets      Asset[]           @relation("AssetAssignee")
+  assetAssignments    AssetAssignment[] @relation("AssignmentUser")
+  assignedByMe        AssetAssignment[] @relation("AssignmentAssigner")
+  accessRecords       AccessRecord[]    @relation("AccessUser")
+  accessGrantedByMe   AccessRecord[]    @relation("AccessGranter")
+  accessRequests      AccessRequest[]   @relation("AccessRequester")
+  accessApprovals     AccessRequest[]   @relation("AccessApprover")
+  reportedTickets     Ticket[]          @relation("TicketReporter")
+  assignedTickets     Ticket[]          @relation("TicketAssignee")
+  ticketComments      TicketComment[]
+  ticketAttachments   TicketAttachment[]
+  knowledgeArticles   KnowledgeArticle[]
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([email])
+  @@index([employeeId])
+  @@index([department])
+  @@index([location])
+  @@index([status])
+}
+
+model Asset {
+  id           String         @id @default(uuid())
+  assetTag     String         @unique
+  name         String
+  category     AssetCategory
+  brand        String?
+  model        String?
+  serialNumber String?
+  status       AssetStatus    @default(AVAILABLE)
+  condition    AssetCondition @default(NEW)
+
+  purchaseDate   DateTime?
+  purchasePrice  Decimal?    @db.Decimal(10, 2)
+  vendor         String?
+  warrantyExpiry DateTime?
+  specifications Json?
+  notes          String?
+  qrCodeUrl      String?
+
+  currentAssigneeId String?
+  currentAssignee   User?   @relation("AssetAssignee", fields: [currentAssigneeId], references: [id])
+
+  assignments    AssetAssignment[]
+  linkedTickets  Ticket[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([status])
+  @@index([currentAssigneeId])
+  @@index([category, status])
+  @@index([assetTag])
+}
+
+model AssetAssignment {
+  id      String @id @default(uuid())
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+  userId  String
+  user    User   @relation("AssignmentUser", fields: [userId], references: [id])
+
+  assignedAt          DateTime @default(now())
+  returnedAt          DateTime?
+  assignedById        String
+  assignedBy          User     @relation("AssignmentAssigner", fields: [assignedById], references: [id])
+  notes               String?
+  conditionAtAssign   AssetCondition?
+  conditionAtReturn   AssetCondition?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assetId])
+  @@index([userId])
+}
+
+model AccessRecord {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation("AccessUser", fields: [userId], references: [id])
+  systemName  String
+  accessLevel AccessLevel
+  grantedAt   DateTime     @default(now())
+  revokedAt   DateTime?
+  grantedById String
+  grantedBy   User         @relation("AccessGranter", fields: [grantedById], references: [id])
+  reviewDate  DateTime?
+  status      AccessStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([systemName])
+}
+
+model AccessRequest {
+  id                   String              @id @default(uuid())
+  requesterId          String
+  requester            User                @relation("AccessRequester", fields: [requesterId], references: [id])
+  approverId           String?
+  approver             User?               @relation("AccessApprover", fields: [approverId], references: [id])
+  systemName           String
+  requestedAccessLevel AccessLevel
+  justification        String
+  status               AccessRequestStatus @default(PENDING)
+  approvedAt           DateTime?
+  deniedAt             DateTime?
+  denialReason         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([requesterId])
+  @@index([status])
+}
+
+model Ticket {
+  id           String         @id @default(uuid())
+  ticketNumber String         @unique
+  title        String
+  description  String
+  category     TicketCategory
+  priority     TicketPriority @default(MEDIUM)
+  status       TicketStatus   @default(OPEN)
+
+  reporterId     String
+  reporter       User    @relation("TicketReporter", fields: [reporterId], references: [id])
+  assigneeId     String?
+  assignee       User?   @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  relatedAssetId String?
+  relatedAsset   Asset?  @relation(fields: [relatedAssetId], references: [id])
+
+  slaDeadline        DateTime?
+  resolvedAt         DateTime?
+  closedAt           DateTime?
+  satisfactionRating Int?
+  satisfactionComment String?
+
+  comments    TicketComment[]
+  attachments TicketAttachment[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([status])
+  @@index([assigneeId])
+  @@index([reporterId])
+  @@index([priority, status])
+  @@index([ticketNumber])
+}
+
+model TicketComment {
+  id         String  @id @default(uuid())
+  ticketId   String
+  ticket     Ticket  @relation(fields: [ticketId], references: [id])
+  authorId   String
+  author     User    @relation(fields: [authorId], references: [id])
+  content    String
+  isInternal Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ticketId])
+}
+
+model TicketAttachment {
+  id         String @id @default(uuid())
+  ticketId   String
+  ticket     Ticket @relation(fields: [ticketId], references: [id])
+  uploadedById String
+  uploadedBy User   @relation(fields: [uploadedById], references: [id])
+  fileName   String
+  fileUrl    String
+  fileSize   Int
+  mimeType   String
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model KnowledgeArticle {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  category    String?
+  tags        String[] @default([])
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  isPublished Boolean  @default(false)
+  viewCount   Int      @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([isPublished])
+  @@index([category])
+}
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  userId     String?
+  user       User?       @relation(fields: [userId], references: [id])
+  action     AuditAction
+  entityType String
+  entityId   String
+  changes    Json?
+  ipAddress  String?
+  userAgent  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+model Notification {
+  id      String           @id @default(uuid())
+  userId  String
+  user    User             @relation(fields: [userId], references: [id])
+  title   String
+  message String
+  type    NotificationType
+  isRead  Boolean          @default(false)
+  readAt  DateTime?
+  link    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model Setting {
+  id          String @id @default(uuid())
+  key         String @unique
+  value       Json
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
