@@ -3,7 +3,9 @@
 import { use } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, User, Tag } from 'lucide-react';
+import { ArrowLeft, Calendar, User, Tag, BookOpen } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { EmptyState } from '@/components/ui/empty-state';
 import { mockArticles } from '@/lib/mock-data';
 
 /**
@@ -11,7 +13,6 @@ import { mockArticles } from '@/lib/mock-data';
  * Only renders content from the mock data / internal knowledge base.
  */
 function MarkdownLine({ line }: { line: string }) {
-  // Bold text replacement as React nodes
   function parseBold(text: string): React.ReactNode[] {
     const parts = text.split(/\*\*(.*?)\*\*/g);
     return parts.map((part, i) =>
@@ -48,71 +49,76 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   if (!article) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Article not found</p>
-        <Link href="/knowledge" className="mt-4 text-sm font-medium" style={{ color: 'var(--accent-primary)' }}>
-          Back to Know Hub
-        </Link>
+        <EmptyState
+          icon={BookOpen}
+          title="Article not found"
+          description="The article you are looking for does not exist or has been removed."
+          actionLabel="Back to Know Hub"
+          actionHref="/knowledge"
+        />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6 md:p-8">
-      <Link
-        href="/knowledge"
-        className="flex items-center gap-1 text-sm transition-colors hover:text-[var(--text-primary)]"
-        style={{ color: 'var(--text-secondary)' }}
-      >
-        <ArrowLeft className="size-4" />
-        Back to Know Hub
-      </Link>
-
-      <motion.article
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mx-auto max-w-3xl"
-      >
-        {/* Metadata */}
-        <div className="mb-6 flex flex-wrap items-center gap-4">
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            <Tag size={12} />
-            {article.category}
-          </span>
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            <User size={12} />
-            {article.author}
-          </span>
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            <Calendar size={12} />
-            Updated {new Date(article.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-          </span>
-        </div>
-
-        {/* Tags */}
-        {article.tags.length > 0 && (
-          <div className="mb-6 flex flex-wrap gap-1.5">
-            {article.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-                style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Content */}
-        <div
-          className="rounded-xl border p-6 md:p-8"
-          style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
+    <ErrorBoundary fallbackTitle="Article failed to load">
+      <div className="space-y-6 p-6 md:p-8">
+        <Link
+          href="/knowledge"
+          className="flex items-center gap-1 text-sm transition-colors hover:text-[var(--text-primary)] min-h-[44px] inline-flex"
+          style={{ color: 'var(--text-secondary)' }}
         >
-          <div className="prose-sm">
-            {renderMarkdown(article.content)}
+          <ArrowLeft className="size-4" />
+          Back to Know Hub
+        </Link>
+
+        <motion.article
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-auto max-w-3xl"
+        >
+          {/* Metadata */}
+          <div className="mb-6 flex flex-wrap items-center gap-4">
+            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              <Tag size={12} aria-hidden="true" />
+              {article.category}
+            </span>
+            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              <User size={12} aria-hidden="true" />
+              {article.author}
+            </span>
+            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              <Calendar size={12} aria-hidden="true" />
+              Updated {new Date(article.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
           </div>
-        </div>
-      </motion.article>
-    </div>
+
+          {/* Tags */}
+          {article.tags.length > 0 && (
+            <div className="mb-6 flex flex-wrap gap-1.5">
+              {article.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+                  style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Content */}
+          <div
+            className="rounded-xl border p-6 md:p-8"
+            style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
+          >
+            <div className="prose-sm">
+              {renderMarkdown(article.content)}
+            </div>
+          </div>
+        </motion.article>
+      </div>
+    </ErrorBoundary>
   );
 }

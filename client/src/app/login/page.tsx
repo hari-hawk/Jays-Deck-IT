@@ -64,7 +64,7 @@ export default function LoginPage() {
   if (authLoading || isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
-        <Loader2 className="size-8 animate-spin" style={{ color: 'var(--accent-primary)' }} />
+        <Loader2 className="size-8 animate-spin" style={{ color: 'var(--accent-primary)' }} aria-label="Checking authentication" />
       </div>
     );
   }
@@ -102,11 +102,12 @@ export default function LoginPage() {
               <div
                 className="mx-auto mt-4 h-px w-12"
                 style={{ background: 'var(--border-secondary)' }}
+                aria-hidden="true"
               />
             </div>
 
             {/* Login Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
               {/* Email Field */}
               <div className="space-y-2">
                 <Label
@@ -121,6 +122,8 @@ export default function LoginPage() {
                   type="email"
                   placeholder="you@techjays.com"
                   autoComplete="email"
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'email-error' : undefined}
                   className="h-11 rounded-lg border px-3 text-sm transition-colors focus-visible:ring-2"
                   style={{
                     background: 'var(--bg-secondary)',
@@ -130,7 +133,7 @@ export default function LoginPage() {
                   {...register('email')}
                 />
                 {errors.email && (
-                  <p className="text-xs" style={{ color: 'var(--danger)' }}>
+                  <p id="email-error" className="text-xs" style={{ color: 'var(--danger)' }} role="alert">
                     {errors.email.message}
                   </p>
                 )}
@@ -151,6 +154,8 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     autoComplete="current-password"
+                    aria-invalid={!!errors.password}
+                    aria-describedby={errors.password ? 'password-error' : undefined}
                     className="h-11 rounded-lg border px-3 pr-10 text-sm transition-colors focus-visible:ring-2"
                     style={{
                       background: 'var(--bg-secondary)',
@@ -162,16 +167,15 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center -mr-3"
                     style={{ color: 'var(--text-tertiary)' }}
-                    tabIndex={-1}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-xs" style={{ color: 'var(--danger)' }}>
+                  <p id="password-error" className="text-xs" style={{ color: 'var(--danger)' }} role="alert">
                     {errors.password.message}
                   </p>
                 )}
@@ -182,7 +186,7 @@ export default function LoginPage() {
                 <input
                   type="checkbox"
                   id="remember"
-                  className="size-3.5 rounded border accent-[var(--accent-primary)]"
+                  className="size-4 rounded border accent-[var(--accent-primary)]"
                   style={{ borderColor: 'var(--border-secondary)' }}
                 />
                 <label
@@ -203,6 +207,8 @@ export default function LoginPage() {
                     color: 'var(--danger)',
                     border: '1px solid rgba(239, 68, 68, 0.2)',
                   }}
+                  role="alert"
+                  aria-live="assertive"
                 >
                   {loginError}
                 </div>
@@ -235,7 +241,7 @@ export default function LoginPage() {
               className="mt-8 text-center text-xs"
               style={{ color: 'var(--text-tertiary)' }}
             >
-              TechJays — The AI Reimagination Company
+              TechJays -- The AI Reimagination Company
             </p>
           </CardContent>
         </Card>

@@ -126,7 +126,7 @@ export function Sidebar() {
         }}
         transition={sidebarTransition}
         aria-label="Main navigation"
-        role="complementary"
+        role="navigation"
       >
         {/* Logo + Theme Toggle */}
         <div

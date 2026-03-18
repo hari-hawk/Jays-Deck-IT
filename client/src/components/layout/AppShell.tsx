@@ -3,12 +3,12 @@
 import * as React from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
-import { useSidebarStore } from '@/stores/sidebar';
 import {
   Sheet,
   SheetContent,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { Toaster } from 'sonner';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -16,14 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
       {/* Skip to main content link */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
-        style={{
-          background: 'var(--bg-secondary)',
-          color: 'var(--text-primary)',
-        }}
-      >
+      <a href="#main-content" className="skip-nav sr-only focus:not-sr-only">
         Skip to main content
       </a>
 
@@ -60,6 +53,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Toast notification container */}
+      <Toaster
+        position="bottom-right"
+        richColors
+        closeButton
+        toastOptions={{
+          style: {
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-primary)',
+          },
+        }}
+      />
+
+      {/* Live region for screen readers */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        id="live-announcements"
+      />
     </div>
   );
 }

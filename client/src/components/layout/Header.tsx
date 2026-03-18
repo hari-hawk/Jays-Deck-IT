@@ -53,7 +53,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden"
+          className="md:hidden min-h-[44px] min-w-[44px]"
           onClick={onMobileMenuToggle}
           aria-label="Toggle navigation menu"
         >
@@ -73,7 +73,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
                 JAYS DECK
               </span>
             </li>
-            <li>
+            <li aria-hidden="true">
               <span
                 className="text-xs"
                 style={{ color: 'var(--text-tertiary)' }}
@@ -100,6 +100,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
           <Search
             className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2"
             style={{ color: 'var(--text-tertiary)' }}
+            aria-hidden="true"
           />
           <Input
             type="search"
@@ -110,7 +111,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
               borderColor: 'var(--border-primary)',
               color: 'var(--text-primary)',
             }}
-            aria-label="Search"
+            aria-label="Search assets, people, and tickets"
           />
         </div>
       </div>
@@ -121,7 +122,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className="relative min-h-[44px] min-w-[44px]"
           aria-label="Notifications (3 unread)"
         >
           <Bell className="size-5" style={{ color: 'var(--text-secondary)' }} />
@@ -131,6 +132,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
               background: 'var(--accent-primary)',
               color: 'white',
             }}
+            aria-live="polite"
           >
             3
           </Badge>

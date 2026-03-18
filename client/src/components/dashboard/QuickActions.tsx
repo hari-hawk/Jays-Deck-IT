@@ -29,7 +29,7 @@ export function QuickActions() {
           <Link
             key={action.label}
             href={action.href}
-            className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all hover:shadow-md"
+            className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all hover:shadow-md min-h-[44px]"
             style={{
               fontFamily: 'var(--font-mono)',
               background: isPrimary ? 'var(--accent-primary)' : 'transparent',
@@ -53,7 +53,7 @@ export function QuickActions() {
               }
             }}
           >
-            <Icon size={16} />
+            <Icon size={16} aria-hidden="true" />
             {action.label}
           </Link>
         );

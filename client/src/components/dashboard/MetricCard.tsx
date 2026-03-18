@@ -33,7 +33,7 @@ export function MetricCard({ title, value, icon: Icon, trend }: MetricCardProps)
             className="flex h-10 w-10 items-center justify-center rounded-lg"
             style={{ background: 'var(--accent-primary-subtle)' }}
           >
-            <Icon size={20} style={{ color: 'var(--accent-primary)' }} />
+            <Icon size={20} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
           </div>
           <div>
             <p
