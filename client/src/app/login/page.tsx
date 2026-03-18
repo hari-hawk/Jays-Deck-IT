@@ -5,12 +5,63 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod/v4';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Shield, UserCog, Users, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+
+const TEST_CREDENTIALS = [
+  {
+    role: 'Super Admin',
+    icon: Shield,
+    color: '#EF4444',
+    email: 'hari.sv@techjays.com',
+    password: 'JaysDeck2024!',
+    name: 'Hari Verman',
+    dept: 'Engineering',
+    location: 'USA',
+    empId: 'TJ-EMP-0001',
+    access: 'Full system access — manage users, assets, tickets, settings, audit logs',
+  },
+  {
+    role: 'IT Admin',
+    icon: UserCog,
+    color: '#3B82F6',
+    email: 'priya.sharma@techjays.com',
+    password: 'JaysDeck2024!',
+    name: 'Priya Sharma',
+    dept: 'Engineering',
+    location: 'India',
+    empId: 'TJ-EMP-0002',
+    access: 'Manage assets, tickets, knowledge base, view audit logs',
+  },
+  {
+    role: 'Manager',
+    icon: Users,
+    color: '#F59E0B',
+    email: 'emily.rodriguez@techjays.com',
+    password: 'JaysDeck2024!',
+    name: 'Emily Rodriguez',
+    dept: 'Engineering',
+    location: 'USA',
+    empId: 'TJ-EMP-0013',
+    access: 'View team assets, approve requests, manage team tickets',
+  },
+  {
+    role: 'Employee',
+    icon: User,
+    color: '#22C55E',
+    email: 'kamal.miah@techjays.com',
+    password: 'JaysDeck2024!',
+    name: 'Kamal Miah',
+    dept: 'Sales',
+    location: 'Bangladesh',
+    empId: 'TJ-EMP-0100',
+    access: 'View own assets, create tickets, view knowledge base',
+  },
+];
 
 const loginSchema = z.object({
   email: z.email('Please enter a valid email address'),
@@ -25,10 +76,12 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTestPanel, setShowTestPanel] = useState(true);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -69,12 +122,18 @@ export default function LoginPage() {
     );
   }
 
+  const fillCredentials = (email: string, password: string) => {
+    setValue('email', email);
+    setValue('password', password);
+    setLoginError(null);
+  };
+
   return (
     <div
-      className="flex min-h-screen items-center justify-center px-4"
+      className="flex min-h-screen items-center justify-center px-4 py-8"
       style={{ background: 'var(--bg-primary)' }}
     >
-      <div className="w-full max-w-[420px]">
+      <div className="w-full max-w-[900px] flex flex-col lg:flex-row gap-6 items-start">
         <Card
           className="border-0 py-0 ring-0"
           style={{
@@ -243,6 +302,112 @@ export default function LoginPage() {
             >
               TechJays -- The AI Reimagination Company
             </p>
+          </CardContent>
+        </Card>
+
+        {/* Test Credentials Panel */}
+        <Card
+          className="w-full lg:w-[420px] shrink-0 border-0 ring-0"
+          style={{
+            background: 'var(--bg-glass)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid var(--bg-glass-border)',
+            boxShadow: 'var(--shadow-md)',
+            borderRadius: 'var(--radius-lg)',
+          }}
+        >
+          <CardContent className="px-6 py-5">
+            <button
+              onClick={() => setShowTestPanel(!showTestPanel)}
+              className="flex w-full items-center justify-between min-h-[44px]"
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex size-6 items-center justify-center rounded-md"
+                  style={{ background: 'var(--accent-primary-subtle)' }}
+                >
+                  <Shield className="size-3.5" style={{ color: 'var(--accent-primary)' }} />
+                </div>
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  Test Credentials
+                </span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10px] font-mono uppercase"
+                  style={{
+                    background: 'var(--warning-subtle)',
+                    color: 'var(--warning)',
+                  }}
+                >
+                  Dev Mode
+                </span>
+              </div>
+              {showTestPanel ? (
+                <ChevronUp className="size-4" style={{ color: 'var(--text-tertiary)' }} />
+              ) : (
+                <ChevronDown className="size-4" style={{ color: 'var(--text-tertiary)' }} />
+              )}
+            </button>
+
+            {showTestPanel && (
+              <div className="mt-4 space-y-3">
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  Click any role to auto-fill login credentials. All passwords: <code className="font-mono px-1 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)' }}>JaysDeck2024!</code>
+                </p>
+
+                {TEST_CREDENTIALS.map((cred) => {
+                  const Icon = cred.icon;
+                  return (
+                    <button
+                      key={cred.role}
+                      onClick={() => fillCredentials(cred.email, cred.password)}
+                      className="flex w-full items-start gap-3 rounded-lg p-3 text-left transition-all hover:scale-[0.99] active:scale-[0.97] min-h-[44px]"
+                      style={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-primary)',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = cred.color;
+                        e.currentTarget.style.boxShadow = `0 0 12px ${cred.color}20`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border-primary)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      <div
+                        className="flex size-9 shrink-0 items-center justify-center rounded-md mt-0.5"
+                        style={{ background: `${cred.color}15`, color: cred.color }}
+                      >
+                        <Icon className="size-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                            {cred.role}
+                          </span>
+                          <span
+                            className="rounded px-1.5 py-0.5 font-mono text-[10px]"
+                            style={{ background: `${cred.color}15`, color: cred.color }}
+                          >
+                            {cred.empId}
+                          </span>
+                        </div>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                          {cred.name} &middot; {cred.dept} &middot; {cred.location}
+                        </p>
+                        <p className="font-mono text-[11px] mt-1 truncate" style={{ color: 'var(--text-tertiary)' }}>
+                          {cred.email}
+                        </p>
+                        <p className="text-[10px] mt-1 leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+                          {cred.access}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

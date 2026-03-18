@@ -128,7 +128,7 @@ export function Sidebar() {
         aria-label="Main navigation"
         role="navigation"
       >
-        {/* Logo + Theme Toggle */}
+        {/* Logo + Collapse Toggle (near logo) */}
         <div
           className={cn(
             'flex shrink-0 items-center justify-between border-b px-4 h-16',
@@ -137,12 +137,18 @@ export function Sidebar() {
           style={{ borderColor: 'var(--border-primary)' }}
         >
           {isCollapsed ? (
-            <span
-              className="text-lg font-extrabold tracking-tight"
-              style={{ color: 'var(--text-primary)' }}
+            <button
+              onClick={toggle}
+              className="flex items-center justify-center min-h-[44px] min-w-[44px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] rounded-md"
+              aria-label="Expand sidebar"
             >
-              J<span style={{ color: 'var(--accent-primary)' }}>D</span>
-            </span>
+              <span
+                className="text-lg font-extrabold tracking-tight"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                J<span style={{ color: 'var(--accent-primary)' }}>D</span>
+              </span>
+            </button>
           ) : (
             <>
               <span
@@ -152,20 +158,29 @@ export function Sidebar() {
                 JAYS{' '}
                 <span style={{ color: 'var(--accent-primary)' }}>DECK</span>
               </span>
-              <ThemeToggle collapsed={false} />
+              <button
+                onClick={toggle}
+                className={cn(
+                  'flex items-center justify-center rounded-md min-h-[44px] min-w-[44px] transition-colors',
+                  'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
+                  'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
+                )}
+                aria-label="Collapse sidebar"
+              >
+                <motion.div
+                  initial={false}
+                  animate={{ rotate: 0 }}
+                  transition={sidebarTransition}
+                >
+                  <ChevronLeft className="size-5" />
+                </motion.div>
+              </button>
             </>
           )}
         </div>
 
-        {/* Theme toggle when collapsed */}
-        {isCollapsed && (
-          <div className="flex justify-center py-2" style={{ borderColor: 'var(--border-primary)' }}>
-            <ThemeToggle collapsed={true} />
-          </div>
-        )}
-
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4" role="navigation">
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="flex flex-col gap-1" role="list">
             {NAV_ITEMS.map((item) => {
               const isActive =
@@ -185,42 +200,8 @@ export function Sidebar() {
           </ul>
         </nav>
 
-        {/* Collapse Toggle */}
-        <div className="px-3 pb-2">
-          <button
-            onClick={toggle}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
-              'min-h-[44px] min-w-[44px]',
-              'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
-              'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-secondary)]',
-              isCollapsed && 'justify-center px-0'
-            )}
-            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <motion.div
-              initial={false}
-              animate={{ rotate: isCollapsed ? 180 : 0 }}
-              transition={sidebarTransition}
-            >
-              <ChevronLeft className="size-5" />
-            </motion.div>
-            {!isCollapsed && (
-              <span className="text-xs uppercase tracking-wider">
-                Collapse
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Separator */}
-        <Separator
-          className="mx-3"
-          style={{ background: 'var(--border-primary)' }}
-        />
-
         {/* Settings */}
-        <div className="px-3 py-2">
+        <div className="px-3 py-1">
           {isCollapsed ? (
             <Tooltip>
               <TooltipTrigger render={<div />}>
@@ -230,7 +211,7 @@ export function Sidebar() {
                     'flex items-center justify-center rounded-md py-2.5 text-sm font-medium transition-colors',
                     'min-h-[44px] min-w-[44px]',
                     'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
-                    'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-secondary)]',
+                    'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
                     pathname === '/settings' && 'text-[var(--text-primary)]'
                   )}
                   aria-current={pathname === '/settings' ? 'page' : undefined}
@@ -249,7 +230,7 @@ export function Sidebar() {
                 'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
                 'min-h-[44px]',
                 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
-                'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-secondary)]',
+                'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
                 pathname === '/settings' && 'text-[var(--text-primary)]'
               )}
               aria-current={pathname === '/settings' ? 'page' : undefined}
@@ -260,19 +241,21 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* Separator */}
-        <Separator
-          className="mx-3"
-          style={{ background: 'var(--border-primary)' }}
-        />
+        <Separator className="mx-3" style={{ background: 'var(--border-primary)' }} />
+
+        {/* Theme Toggle (at the bottom) */}
+        <div className="px-3 py-2">
+          <ThemeToggle collapsed={isCollapsed} />
+        </div>
+
+        <Separator className="mx-3" style={{ background: 'var(--border-primary)' }} />
 
         {/* User Section */}
         <div
           className={cn(
-            'flex shrink-0 items-center gap-3 border-t p-4',
+            'flex shrink-0 items-center gap-3 p-4',
             isCollapsed && 'justify-center px-0 py-4'
           )}
-          style={{ borderColor: 'var(--border-primary)' }}
         >
           <Link href="/profile" className="flex items-center gap-3 min-w-0">
             <Avatar size="default">
@@ -283,7 +266,7 @@ export function Sidebar() {
                   color: 'var(--accent-primary)',
                 }}
               >
-                AK
+                HV
               </AvatarFallback>
             </Avatar>
             {!isCollapsed && (
@@ -292,13 +275,13 @@ export function Sidebar() {
                   className="truncate text-sm font-medium"
                   style={{ color: 'var(--text-primary)' }}
                 >
-                  Admin User
+                  Hari Verman
                 </span>
                 <span
                   className="truncate text-xs"
                   style={{ color: 'var(--text-tertiary)' }}
                 >
-                  IT Administrator
+                  Super Admin
                 </span>
               </div>
             )}
