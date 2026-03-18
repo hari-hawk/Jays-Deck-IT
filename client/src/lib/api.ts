@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+// In production (Vercel), the API is same-origin under /api so no absolute URL
+// is needed. During local dev, NEXT_PUBLIC_API_URL can point to the Express
+// server running on localhost:4000. When the Next.js dev server proxies /api/*
+// to Express (configured in next.config.ts), even local dev can use '/api'.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
