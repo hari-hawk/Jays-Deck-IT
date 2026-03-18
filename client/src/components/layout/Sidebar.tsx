@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Monitor,
   Users,
-  Shield,
   Ticket,
   BookOpen,
   ScrollText,
@@ -24,15 +23,15 @@ import {
 } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const NAV_ITEMS = [
   { section: '00', label: 'COMMAND BRIDGE', href: '/', icon: LayoutDashboard },
   { section: '01', label: 'ASSET VAULT', href: '/assets', icon: Monitor },
   { section: '02', label: 'PEOPLE LINK', href: '/employees', icon: Users },
-  { section: '03', label: 'ACCESS GATE', href: '/access', icon: Shield },
-  { section: '04', label: 'SERVICE HUB', href: '/tickets', icon: Ticket },
-  { section: '05', label: 'KNOW HUB', href: '/knowledge', icon: BookOpen },
-  { section: '06', label: 'AUDIT TRAIL', href: '/audit', icon: ScrollText },
+  { section: '03', label: 'SERVICE HUB', href: '/tickets', icon: Ticket },
+  { section: '04', label: 'KNOW HUB', href: '/knowledge', icon: BookOpen },
+  { section: '05', label: 'AUDIT TRAIL', href: '/audit', icon: ScrollText },
 ] as const;
 
 const SIDEBAR_WIDTH = 280;
@@ -64,7 +63,7 @@ function NavItem({
         'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-secondary)]',
         isActive
           ? 'text-[var(--text-primary)]'
-          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-secondary)]',
+          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
         isCollapsed && 'justify-center px-0'
       )}
       style={
@@ -129,10 +128,10 @@ export function Sidebar() {
         aria-label="Main navigation"
         role="complementary"
       >
-        {/* Logo */}
+        {/* Logo + Theme Toggle */}
         <div
           className={cn(
-            'flex h-16 shrink-0 items-center border-b px-4',
+            'flex shrink-0 items-center justify-between border-b px-4 h-16',
             isCollapsed && 'justify-center px-0'
           )}
           style={{ borderColor: 'var(--border-primary)' }}
@@ -145,15 +144,25 @@ export function Sidebar() {
               J<span style={{ color: 'var(--accent-primary)' }}>D</span>
             </span>
           ) : (
-            <span
-              className="text-xl font-extrabold tracking-tight"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              JAYS{' '}
-              <span style={{ color: 'var(--accent-primary)' }}>DECK</span>
-            </span>
+            <>
+              <span
+                className="text-xl font-extrabold tracking-tight"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                JAYS{' '}
+                <span style={{ color: 'var(--accent-primary)' }}>DECK</span>
+              </span>
+              <ThemeToggle collapsed={false} />
+            </>
           )}
         </div>
+
+        {/* Theme toggle when collapsed */}
+        {isCollapsed && (
+          <div className="flex justify-center py-2" style={{ borderColor: 'var(--border-primary)' }}>
+            <ThemeToggle collapsed={true} />
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4" role="navigation">
@@ -183,7 +192,7 @@ export function Sidebar() {
             className={cn(
               'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
               'min-h-[44px] min-w-[44px]',
-              'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+              'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
               'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-secondary)]',
               isCollapsed && 'justify-center px-0'
             )}
@@ -220,7 +229,7 @@ export function Sidebar() {
                   className={cn(
                     'flex items-center justify-center rounded-md py-2.5 text-sm font-medium transition-colors',
                     'min-h-[44px] min-w-[44px]',
-                    'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                    'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
                     'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-secondary)]',
                     pathname === '/settings' && 'text-[var(--text-primary)]'
                   )}
@@ -239,7 +248,7 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
                 'min-h-[44px]',
-                'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
                 'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-secondary)]',
                 pathname === '/settings' && 'text-[var(--text-primary)]'
               )}
@@ -265,33 +274,35 @@ export function Sidebar() {
           )}
           style={{ borderColor: 'var(--border-primary)' }}
         >
-          <Avatar size="default">
-            <AvatarFallback
-              className="text-xs font-bold"
-              style={{
-                background: 'var(--accent-primary-subtle)',
-                color: 'var(--accent-primary)',
-              }}
-            >
-              AK
-            </AvatarFallback>
-          </Avatar>
-          {!isCollapsed && (
-            <div className="flex flex-col overflow-hidden">
-              <span
-                className="truncate text-sm font-medium"
-                style={{ color: 'var(--text-primary)' }}
+          <Link href="/profile" className="flex items-center gap-3 min-w-0">
+            <Avatar size="default">
+              <AvatarFallback
+                className="text-xs font-bold"
+                style={{
+                  background: 'var(--accent-primary-subtle)',
+                  color: 'var(--accent-primary)',
+                }}
               >
-                Admin User
-              </span>
-              <span
-                className="truncate text-xs"
-                style={{ color: 'var(--text-tertiary)' }}
-              >
-                IT Administrator
-              </span>
-            </div>
-          )}
+                AK
+              </AvatarFallback>
+            </Avatar>
+            {!isCollapsed && (
+              <div className="flex flex-col overflow-hidden">
+                <span
+                  className="truncate text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Admin User
+                </span>
+                <span
+                  className="truncate text-xs"
+                  style={{ color: 'var(--text-tertiary)' }}
+                >
+                  IT Administrator
+                </span>
+              </div>
+            )}
+          </Link>
         </div>
       </motion.aside>
     </TooltipProvider>

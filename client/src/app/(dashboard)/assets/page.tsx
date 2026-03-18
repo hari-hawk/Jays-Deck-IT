@@ -1,0 +1,236 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { Search, Plus, LayoutGrid, List, Monitor, Laptop, Smartphone, Headphones, HardDrive, FileCode, Package } from 'lucide-react';
+import { PageHeader } from '@/components/ui/page-header';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { mockAssets, type MockAsset } from '@/lib/mock-data';
+
+const CATEGORY_ICONS: Record<string, typeof Monitor> = {
+  LAPTOP: Laptop,
+  DESKTOP: HardDrive,
+  MONITOR: Monitor,
+  PHONE: Smartphone,
+  HEADSET: Headphones,
+  SOFTWARE_LICENSE: FileCode,
+  OTHER: Package,
+};
+
+const container = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.05 } },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
+
+export default function AssetsPage() {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  const filtered = mockAssets.filter((asset) => {
+    const matchesSearch = !search || asset.name.toLowerCase().includes(search.toLowerCase()) || asset.assetTag.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'ALL' || asset.status === statusFilter;
+    const matchesCategory = categoryFilter === 'ALL' || asset.category === categoryFilter;
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
+
+  return (
+    <div className="space-y-6 p-6 md:p-8">
+      <PageHeader
+        index="01"
+        title="ASSET VAULT"
+        description="Manage and track all company IT assets"
+        actions={
+          <Link href="/assets/new">
+            <Button
+              className="gap-2"
+              style={{ background: 'var(--accent-primary)', color: '#fff' }}
+            >
+              <Plus className="size-4" />
+              Add Asset
+            </Button>
+          </Link>
+        }
+      />
+
+      {/* Filters */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex flex-1 items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }} />
+            <Input
+              placeholder="Search assets..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-10"
+              style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-10 rounded-lg border px-3 text-sm"
+            style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+          >
+            <option value="ALL">All Status</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="ASSIGNED">Assigned</option>
+            <option value="IN_MAINTENANCE">In Maintenance</option>
+            <option value="RETIRED">Retired</option>
+            <option value="LOST">Lost</option>
+          </select>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="h-10 rounded-lg border px-3 text-sm hidden sm:block"
+            style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+          >
+            <option value="ALL">All Categories</option>
+            <option value="LAPTOP">Laptop</option>
+            <option value="DESKTOP">Desktop</option>
+            <option value="MONITOR">Monitor</option>
+            <option value="PHONE">Phone</option>
+            <option value="HEADSET">Headset</option>
+            <option value="SOFTWARE_LICENSE">Software License</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border p-1" style={{ borderColor: 'var(--border-primary)' }}>
+          <button
+            onClick={() => setViewMode('grid')}
+            className="rounded-md p-2 transition-colors"
+            style={{ background: viewMode === 'grid' ? 'var(--accent-primary-subtle)' : 'transparent', color: viewMode === 'grid' ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}
+          >
+            <LayoutGrid className="size-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className="rounded-md p-2 transition-colors"
+            style={{ background: viewMode === 'list' ? 'var(--accent-primary-subtle)' : 'transparent', color: viewMode === 'list' ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}
+          >
+            <List className="size-4" />
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Grid View */}
+      {viewMode === 'grid' ? (
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
+          {filtered.map((asset) => (
+            <AssetCard key={asset.id} asset={asset} />
+          ))}
+        </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="overflow-x-auto rounded-xl border"
+          style={{ borderColor: 'var(--border-primary)' }}
+        >
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
+                <th className="border-b px-4 py-3 text-left font-mono text-xs uppercase tracking-wider" style={{ color: 'var(--text-tertiary)', borderColor: 'var(--border-primary)' }}>Asset</th>
+                <th className="border-b px-4 py-3 text-left font-mono text-xs uppercase tracking-wider" style={{ color: 'var(--text-tertiary)', borderColor: 'var(--border-primary)' }}>Tag</th>
+                <th className="border-b px-4 py-3 text-left font-mono text-xs uppercase tracking-wider hidden md:table-cell" style={{ color: 'var(--text-tertiary)', borderColor: 'var(--border-primary)' }}>Category</th>
+                <th className="border-b px-4 py-3 text-left font-mono text-xs uppercase tracking-wider" style={{ color: 'var(--text-tertiary)', borderColor: 'var(--border-primary)' }}>Status</th>
+                <th className="border-b px-4 py-3 text-left font-mono text-xs uppercase tracking-wider hidden lg:table-cell" style={{ color: 'var(--text-tertiary)', borderColor: 'var(--border-primary)' }}>Assignee</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((asset) => (
+                <tr
+                  key={asset.id}
+                  className="transition-colors hover:bg-[var(--bg-tertiary)]"
+                  style={{ borderColor: 'var(--border-primary)' }}
+                >
+                  <td className="border-b px-4 py-3" style={{ borderColor: 'var(--border-primary)' }}>
+                    <Link href={`/assets/${asset.id}`} className="font-medium hover:underline" style={{ color: 'var(--text-primary)' }}>
+                      {asset.name}
+                    </Link>
+                  </td>
+                  <td className="border-b px-4 py-3 font-mono text-xs" style={{ color: 'var(--accent-primary)', borderColor: 'var(--border-primary)' }}>
+                    {asset.assetTag}
+                  </td>
+                  <td className="border-b px-4 py-3 hidden md:table-cell text-xs uppercase" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-primary)' }}>
+                    {asset.category}
+                  </td>
+                  <td className="border-b px-4 py-3" style={{ borderColor: 'var(--border-primary)' }}>
+                    <StatusBadge status={asset.status} />
+                  </td>
+                  <td className="border-b px-4 py-3 hidden lg:table-cell text-sm" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-primary)' }}>
+                    {asset.assignee || '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </motion.div>
+      )}
+
+      {filtered.length === 0 && (
+        <div className="py-16 text-center" style={{ color: 'var(--text-tertiary)' }}>
+          <Package className="mx-auto size-12 mb-3 opacity-40" />
+          <p className="text-sm">No assets found matching your filters.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AssetCard({ asset }: { asset: MockAsset }) {
+  const Icon = CATEGORY_ICONS[asset.category] || Package;
+
+  return (
+    <motion.div variants={item}>
+      <Link href={`/assets/${asset.id}`}>
+        <div
+          className="group rounded-xl border p-5 transition-all hover:shadow-md"
+          style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-secondary)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-primary)'; }}
+        >
+          <div className="flex items-start justify-between mb-3">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-lg"
+              style={{ background: 'var(--accent-primary-subtle)' }}
+            >
+              <Icon size={20} style={{ color: 'var(--accent-primary)' }} />
+            </div>
+            <StatusBadge status={asset.status} />
+          </div>
+          <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+            {asset.name}
+          </h3>
+          <p className="mt-1 font-mono text-xs" style={{ color: 'var(--accent-primary)' }}>
+            {asset.assetTag}
+          </p>
+          {asset.assignee && (
+            <p className="mt-2 text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+              Assigned to {asset.assignee}
+            </p>
+          )}
+        </div>
+      </Link>
+    </motion.div>
+  );
+}

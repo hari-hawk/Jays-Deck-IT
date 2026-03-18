@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Package, KeyRound } from 'lucide-react';
+import { Plus, Package } from 'lucide-react';
 
 const actions = [
   {
@@ -14,12 +14,6 @@ const actions = [
     label: 'Add Asset',
     href: '/assets/new',
     icon: Package,
-    variant: 'outlined' as const,
-  },
-  {
-    label: 'Request Access',
-    href: '/access/request',
-    icon: KeyRound,
     variant: 'outlined' as const,
   },
 ];

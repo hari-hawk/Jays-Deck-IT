@@ -9,6 +9,12 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './config/logger.js';
 import { authRouter } from './routes/auth.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { usersRouter } from './routes/users.js';
+import { assetsRouter } from './routes/assets.js';
+import { ticketsRouter } from './routes/tickets.js';
+import { knowledgeRouter } from './routes/knowledge.js';
+import { auditRouter } from './routes/audit.js';
+import { notificationsRouter } from './routes/notifications.js';
 
 const app: Express = express();
 
@@ -33,6 +39,12 @@ app.get('/api/health', (_req, res) => {
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/assets', assetsRouter);
+app.use('/api/tickets', ticketsRouter);
+app.use('/api/knowledge', knowledgeRouter);
+app.use('/api/audit', auditRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Error handling
 app.use(errorHandler);

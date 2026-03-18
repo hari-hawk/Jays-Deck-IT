@@ -1,5 +1,8 @@
 import path from 'node:path';
 import { defineConfig } from 'prisma/config';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.join(import.meta.dirname, '../.env') });
 
 export default defineConfig({
   earlyAccess: true,

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { inter, jetbrainsMono } from "@/lib/fonts";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { QueryProvider } from "@/components/providers/QueryProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,9 +16,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+        <ThemeProvider>
+          <QueryProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

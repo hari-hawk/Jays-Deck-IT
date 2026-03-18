@@ -15,17 +15,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { useSidebarStore } from '@/stores/sidebar';
+import { useAuthStore } from '@/stores/auth';
 
 const ROUTE_LABELS: Record<string, string> = {
   '/': 'Command Bridge',
   '/assets': 'Asset Vault',
   '/employees': 'People Link',
-  '/access': 'Access Gate',
   '/tickets': 'Service Hub',
   '/knowledge': 'Know Hub',
   '/audit': 'Audit Trail',
   '/settings': 'Settings',
+  '/profile': 'Profile',
 };
 
 function getBreadcrumbLabel(pathname: string): string {
@@ -37,13 +37,13 @@ function getBreadcrumbLabel(pathname: string): string {
 export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void }) {
   const pathname = usePathname();
   const label = getBreadcrumbLabel(pathname);
-  const { isCollapsed } = useSidebarStore();
+  const logout = useAuthStore((s) => s.logout);
 
   return (
     <header
       className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-4 border-b px-4 backdrop-blur-md md:px-6"
       style={{
-        background: 'rgba(9, 9, 11, 0.8)',
+        background: 'var(--bg-glass)',
         borderColor: 'var(--border-primary)',
       }}
       role="banner"
@@ -57,7 +57,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
           onClick={onMobileMenuToggle}
           aria-label="Toggle navigation menu"
         >
-          <Menu className="size-5" />
+          <Menu className="size-5" style={{ color: 'var(--text-secondary)' }} />
         </Button>
       )}
 
@@ -161,12 +161,14 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
           <DropdownMenuContent align="end" sideOffset={8}>
             <DropdownMenuLabel>Admin User</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => { window.location.href = '/profile'; }}
+            >
               <User className="size-4" />
               Profile
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => logout()}>
               <LogOut className="size-4" />
               Sign out
             </DropdownMenuItem>

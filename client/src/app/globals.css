@@ -128,9 +128,52 @@
   }
 }
 
-/* ── JAYS DECK Design Tokens ── */
+/* ── JAYS DECK Design Tokens (Light Mode) ── */
 
 :root {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F9FAFB;
+  --bg-tertiary: #F3F4F6;
+  --bg-glass: rgba(255, 255, 255, 0.8);
+  --bg-glass-border: rgba(209, 213, 219, 0.5);
+
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --text-tertiary: #9CA3AF;
+  --text-inverse: #FAFAFA;
+
+  --accent-primary: #3B82F6;
+  --accent-primary-hover: #2563EB;
+  --accent-primary-subtle: rgba(59, 130, 246, 0.08);
+  --accent-primary-border: rgba(59, 130, 246, 0.3);
+
+  --success: #16A34A;
+  --success-subtle: rgba(22, 163, 74, 0.08);
+  --warning: #D97706;
+  --warning-subtle: rgba(217, 119, 6, 0.08);
+  --danger: #DC2626;
+  --danger-subtle: rgba(220, 38, 38, 0.08);
+  --info: #0891B2;
+  --info-subtle: rgba(8, 145, 178, 0.08);
+
+  --border-primary: #E5E7EB;
+  --border-secondary: #D1D5DB;
+  --border-accent: rgba(59, 130, 246, 0.4);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.1);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}
+
+/* ── JAYS DECK Design Tokens (Dark Mode) ── */
+
+.dark {
   --bg-primary: #09090B;
   --bg-secondary: #18181B;
   --bg-tertiary: #27272A;
@@ -164,11 +207,6 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
-
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
 }
 
 body {
