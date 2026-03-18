@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { mockAssets } from '@/lib/mock-data';
 
 export default function AssetDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,6 +31,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
 
   return (
     <ErrorBoundary fallbackTitle="Asset details failed to load">
+      <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
         <div className="flex items-center gap-3">
           <Link
@@ -80,8 +82,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
 
           <TabsContent value={0} className="mt-6">
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
               className="grid grid-cols-1 gap-6 md:grid-cols-2"
             >
               <div className="space-y-4 rounded-xl border p-5" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
@@ -138,6 +141,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
           </TabsContent>
         </Tabs>
       </div>
+      </PageTransition>
     </ErrorBoundary>
   );
 }

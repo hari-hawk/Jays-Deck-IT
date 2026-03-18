@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { mockEmployees } from '@/lib/mock-data';
 import { toast } from 'sonner';
 
@@ -33,6 +34,7 @@ export default function SettingsPage() {
 
   return (
     <ErrorBoundary fallbackTitle="Settings failed to load">
+      <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
         <PageHeader
           index=""
@@ -165,6 +167,7 @@ export default function SettingsPage() {
           </TabsContent>
         </Tabs>
       </div>
+      </PageTransition>
     </ErrorBoundary>
   );
 }

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { mockAuditEntries } from '@/lib/mock-data';
 
 const ACTION_CONFIG: Record<string, { icon: LucideIcon; color: string }> = {
@@ -55,6 +56,7 @@ export default function AuditPage() {
 
   return (
     <ErrorBoundary fallbackTitle="Audit Trail failed to load">
+      <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
         <PageHeader
           index="05"
@@ -129,7 +131,7 @@ export default function AuditPage() {
                   initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.03 }}
-                  className="flex gap-4 rounded-xl border p-4 transition-all hover:shadow-sm"
+                  className="flex gap-4 rounded-xl border p-4 transition-all hover:shadow-sm card-hover-lift"
                   style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
                 >
                   <div
@@ -180,6 +182,7 @@ export default function AuditPage() {
           />
         )}
       </div>
+      </PageTransition>
     </ErrorBoundary>
   );
 }

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { mockAssets, mockTickets } from '@/lib/mock-data';
 import { toast } from 'sonner';
 
@@ -60,6 +61,7 @@ export default function ProfilePage() {
 
   return (
     <ErrorBoundary fallbackTitle="Profile failed to load">
+      <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
         {/* Profile Header */}
         <motion.div
@@ -278,6 +280,7 @@ export default function ProfilePage() {
           </TabsContent>
         </Tabs>
       </div>
+      </PageTransition>
     </ErrorBoundary>
   );
 }

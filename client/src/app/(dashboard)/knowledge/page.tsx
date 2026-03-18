@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { mockArticles } from '@/lib/mock-data';
 
 const container = {
@@ -45,6 +46,7 @@ export default function KnowledgePage() {
 
   return (
     <ErrorBoundary fallbackTitle="Know Hub failed to load">
+      <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
         <PageHeader
           index="04"
@@ -102,7 +104,7 @@ export default function KnowledgePage() {
               <motion.div key={article.id} variants={item}>
                 <Link href={`/knowledge/${article.id}`}>
                   <article
-                    className="group rounded-xl border p-5 transition-all hover:shadow-md"
+                    className="group rounded-xl border p-5 transition-all hover:shadow-md card-hover-lift"
                     style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-secondary)'; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-primary)'; }}
@@ -156,6 +158,7 @@ export default function KnowledgePage() {
           />
         )}
       </div>
+      </PageTransition>
     </ErrorBoundary>
   );
 }

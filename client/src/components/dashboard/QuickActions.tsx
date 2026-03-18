@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { Plus, Package } from 'lucide-react';
 
 const actions = [
@@ -26,36 +27,41 @@ export function QuickActions() {
         const isPrimary = action.variant === 'primary';
 
         return (
-          <Link
+          <motion.div
             key={action.label}
-            href={action.href}
-            className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all hover:shadow-md min-h-[44px]"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              background: isPrimary ? 'var(--accent-primary)' : 'transparent',
-              color: isPrimary ? '#fff' : 'var(--text-secondary)',
-              borderColor: isPrimary ? 'var(--accent-primary)' : 'var(--border-secondary)',
-            }}
-            onMouseEnter={(e) => {
-              if (!isPrimary) {
-                (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-primary)';
-                (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
-              } else {
-                (e.currentTarget as HTMLElement).style.background = 'var(--accent-primary-hover)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isPrimary) {
-                (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-secondary)';
-                (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
-              } else {
-                (e.currentTarget as HTMLElement).style.background = 'var(--accent-primary)';
-              }
-            }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
           >
-            <Icon size={16} aria-hidden="true" />
-            {action.label}
-          </Link>
+            <Link
+              href={action.href}
+              className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all min-h-[44px] hover-glow"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                background: isPrimary ? 'var(--accent-primary)' : 'transparent',
+                color: isPrimary ? '#fff' : 'var(--text-secondary)',
+                borderColor: isPrimary ? 'var(--accent-primary)' : 'var(--border-secondary)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isPrimary) {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-primary)';
+                  (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
+                } else {
+                  (e.currentTarget as HTMLElement).style.background = 'var(--accent-primary-hover)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isPrimary) {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-secondary)';
+                  (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+                } else {
+                  (e.currentTarget as HTMLElement).style.background = 'var(--accent-primary)';
+                }
+              }}
+            >
+              <Icon size={16} aria-hidden="true" />
+              {action.label}
+            </Link>
+          </motion.div>
         );
       })}
     </div>

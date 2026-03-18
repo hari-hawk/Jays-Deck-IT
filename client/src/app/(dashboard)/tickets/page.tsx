@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { mockTickets } from '@/lib/mock-data';
 
 function formatTimeAgo(dateStr: string) {
@@ -52,6 +53,7 @@ export default function TicketsPage() {
 
   return (
     <ErrorBoundary fallbackTitle="Service Hub failed to load">
+      <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
         <PageHeader
           index="03"
@@ -159,7 +161,7 @@ export default function TicketsPage() {
               >
                 <Link href={`/tickets/${ticket.id}`}>
                   <div
-                    className="group rounded-xl border p-4 transition-all hover:shadow-md"
+                    className="group rounded-xl border p-4 transition-all hover:shadow-md card-hover-lift"
                     style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-secondary)'; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-primary)'; }}
@@ -200,6 +202,7 @@ export default function TicketsPage() {
           />
         )}
       </div>
+      </PageTransition>
     </ErrorBoundary>
   );
 }

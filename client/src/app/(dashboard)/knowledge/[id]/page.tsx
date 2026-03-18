@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, User, Tag, BookOpen } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { mockArticles } from '@/lib/mock-data';
 
 /**
@@ -62,6 +63,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <ErrorBoundary fallbackTitle="Article failed to load">
+      <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
         <Link
           href="/knowledge"
@@ -119,6 +121,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </motion.article>
       </div>
+      </PageTransition>
     </ErrorBoundary>
   );
 }

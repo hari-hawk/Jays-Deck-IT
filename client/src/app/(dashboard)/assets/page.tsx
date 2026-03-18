@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { mockAssets, type MockAsset } from '@/lib/mock-data';
 
 const CATEGORY_ICONS: Record<string, typeof Monitor> = {
@@ -58,6 +59,7 @@ export default function AssetsPage() {
 
   return (
     <ErrorBoundary fallbackTitle="Asset Vault failed to load">
+      <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
         <PageHeader
           index="01"
@@ -225,6 +227,7 @@ export default function AssetsPage() {
           />
         )}
       </div>
+      </PageTransition>
     </ErrorBoundary>
   );
 }
@@ -233,7 +236,7 @@ function AssetCard({ asset }: { asset: MockAsset }) {
   const Icon = CATEGORY_ICONS[asset.category] || Package;
 
   return (
-    <motion.div variants={item}>
+    <motion.div variants={item} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
       <Link href={`/assets/${asset.id}`}>
         <div
           className="group rounded-xl border p-5 transition-all hover:shadow-md"

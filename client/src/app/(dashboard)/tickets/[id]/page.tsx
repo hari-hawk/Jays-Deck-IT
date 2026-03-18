@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { mockTickets } from '@/lib/mock-data';
 import { toast } from 'sonner';
 
@@ -60,6 +61,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   return (
     <ErrorBoundary fallbackTitle="Ticket details failed to load">
+      <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
         <Link
           href="/tickets"
@@ -226,6 +228,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           </motion.div>
         </div>
       </div>
+      </PageTransition>
     </ErrorBoundary>
   );
 }

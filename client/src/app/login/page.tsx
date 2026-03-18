@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod/v4';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { motion } from 'framer-motion';
 import { Eye, EyeOff, Loader2, Shield, UserCog, Users, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { Card, CardContent } from '@/components/ui/card';
@@ -70,6 +71,16 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+const credCardStagger = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.2 } },
+};
+
+const credCardItem = {
+  hidden: { opacity: 0, x: 24 },
+  show: { opacity: 1, x: 0, transition: { duration: 0.4, ease: 'easeOut' as const } },
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const { login, isAuthenticated, isLoading: authLoading } = useAuthStore();
@@ -130,286 +141,311 @@ export default function LoginPage() {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center px-4 py-8"
+      className="relative flex min-h-screen items-center justify-center px-4 py-8 overflow-hidden"
       style={{ background: 'var(--bg-primary)' }}
     >
-      <div className="w-full max-w-[900px] flex flex-col lg:flex-row gap-6 items-start">
-        <Card
-          className="border-0 py-0 ring-0"
-          style={{
-            background: 'var(--bg-glass)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid var(--bg-glass-border)',
-            boxShadow: 'var(--shadow-lg), var(--shadow-glow)',
-            borderRadius: 'var(--radius-lg)',
-          }}
-        >
-          <CardContent className="px-8 py-10">
-            {/* Branding */}
-            <div className="mb-8 text-center">
-              <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-                JAYS{' '}
-                <span style={{ color: 'var(--accent-primary)' }}>DECK</span>
-              </h1>
-              <p
-                className="mt-2 font-mono text-xs uppercase tracking-[0.25em]"
-                style={{ color: 'var(--text-tertiary)' }}
-              >
-                IT Command Center
-              </p>
-              <div
-                className="mx-auto mt-4 h-px w-12"
-                style={{ background: 'var(--border-secondary)' }}
-                aria-hidden="true"
-              />
-            </div>
+      {/* Animated gradient orbs background */}
+      <div className="orb orb-1" aria-hidden="true" />
+      <div className="orb orb-2" aria-hidden="true" />
+      <div className="orb orb-3" aria-hidden="true" />
 
-            {/* Login Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-              {/* Email Field */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="email"
-                  className="text-xs uppercase tracking-wider"
-                  style={{ color: 'var(--text-secondary)' }}
+      <div className="relative z-10 w-full max-w-[900px] flex flex-col lg:flex-row gap-6 items-start">
+        {/* Login Card - fade in + scale up */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        >
+          <Card
+            className="border-0 py-0 ring-0"
+            style={{
+              background: 'var(--bg-glass)',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
+              border: '1px solid var(--bg-glass-border)',
+              boxShadow: 'var(--shadow-lg), var(--shadow-glow)',
+              borderRadius: 'var(--radius-lg)',
+            }}
+          >
+            <CardContent className="px-8 py-10">
+              {/* Branding */}
+              <div className="mb-8 text-center">
+                <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+                  JAYS{' '}
+                  <span className="logo-glow" style={{ color: 'var(--accent-primary)' }}>DECK</span>
+                </h1>
+                <p
+                  className="mt-2 font-mono text-xs uppercase tracking-[0.25em]"
+                  style={{ color: 'var(--text-tertiary)' }}
                 >
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@techjays.com"
-                  autoComplete="email"
-                  aria-invalid={!!errors.email}
-                  aria-describedby={errors.email ? 'email-error' : undefined}
-                  className="h-11 rounded-lg border px-3 text-sm transition-colors focus-visible:ring-2"
-                  style={{
-                    background: 'var(--bg-secondary)',
-                    borderColor: errors.email ? 'var(--danger)' : 'var(--border-primary)',
-                    color: 'var(--text-primary)',
-                  }}
-                  {...register('email')}
+                  IT Command Center
+                </p>
+                <div
+                  className="mx-auto mt-4 w-12 accent-gradient-line"
+                  aria-hidden="true"
                 />
-                {errors.email && (
-                  <p id="email-error" className="text-xs" style={{ color: 'var(--danger)' }} role="alert">
-                    {errors.email.message}
-                  </p>
-                )}
               </div>
 
-              {/* Password Field */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="password"
-                  className="text-xs uppercase tracking-wider"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  Password
-                </Label>
-                <div className="relative">
+              {/* Login Form */}
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="email"
+                    className="text-xs uppercase tracking-wider"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    Email
+                  </Label>
                   <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
-                    autoComplete="current-password"
-                    aria-invalid={!!errors.password}
-                    aria-describedby={errors.password ? 'password-error' : undefined}
-                    className="h-11 rounded-lg border px-3 pr-10 text-sm transition-colors focus-visible:ring-2"
+                    id="email"
+                    type="email"
+                    placeholder="you@techjays.com"
+                    autoComplete="email"
+                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? 'email-error' : undefined}
+                    className="h-11 rounded-lg border px-3 text-sm transition-colors focus-visible:ring-2"
                     style={{
                       background: 'var(--bg-secondary)',
-                      borderColor: errors.password ? 'var(--danger)' : 'var(--border-primary)',
+                      borderColor: errors.email ? 'var(--danger)' : 'var(--border-primary)',
                       color: 'var(--text-primary)',
                     }}
-                    {...register('password')}
+                    {...register('email')}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center -mr-3"
-                    style={{ color: 'var(--text-tertiary)' }}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  {errors.email && (
+                    <p id="email-error" className="text-xs" style={{ color: 'var(--danger)' }} role="alert">
+                      {errors.email.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Password Field */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="password"
+                    className="text-xs uppercase tracking-wider"
+                    style={{ color: 'var(--text-secondary)' }}
                   >
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p id="password-error" className="text-xs" style={{ color: 'var(--danger)' }} role="alert">
-                    {errors.password.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Remember Me */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  className="size-4 rounded border accent-[var(--accent-primary)]"
-                  style={{ borderColor: 'var(--border-secondary)' }}
-                />
-                <label
-                  htmlFor="remember"
-                  className="cursor-pointer text-xs"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  Remember me
-                </label>
-              </div>
-
-              {/* Error Message */}
-              {loginError && (
-                <div
-                  className="rounded-md px-3 py-2 text-center text-sm"
-                  style={{
-                    background: 'var(--danger-subtle)',
-                    color: 'var(--danger)',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                  }}
-                  role="alert"
-                  aria-live="assertive"
-                >
-                  {loginError}
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="h-11 w-full cursor-pointer text-sm font-semibold tracking-wide transition-all hover:brightness-90 active:scale-[0.98]"
-                style={{
-                  background: isSubmitting ? 'var(--accent-primary-hover)' : 'var(--accent-primary)',
-                  color: '#ffffff',
-                  borderRadius: 'var(--radius-md)',
-                }}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="size-4 animate-spin" />
-                    Authenticating...
-                  </span>
-                ) : (
-                  'Sign In'
-                )}
-              </Button>
-            </form>
-
-            {/* Footer */}
-            <p
-              className="mt-8 text-center text-xs"
-              style={{ color: 'var(--text-tertiary)' }}
-            >
-              TechJays -- The AI Reimagination Company
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Test Credentials Panel */}
-        <Card
-          className="w-full lg:w-[420px] shrink-0 border-0 ring-0"
-          style={{
-            background: 'var(--bg-glass)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid var(--bg-glass-border)',
-            boxShadow: 'var(--shadow-md)',
-            borderRadius: 'var(--radius-lg)',
-          }}
-        >
-          <CardContent className="px-6 py-5">
-            <button
-              onClick={() => setShowTestPanel(!showTestPanel)}
-              className="flex w-full items-center justify-between min-h-[44px]"
-            >
-              <div className="flex items-center gap-2">
-                <div
-                  className="flex size-6 items-center justify-center rounded-md"
-                  style={{ background: 'var(--accent-primary-subtle)' }}
-                >
-                  <Shield className="size-3.5" style={{ color: 'var(--accent-primary)' }} />
-                </div>
-                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  Test Credentials
-                </span>
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px] font-mono uppercase"
-                  style={{
-                    background: 'var(--warning-subtle)',
-                    color: 'var(--warning)',
-                  }}
-                >
-                  Dev Mode
-                </span>
-              </div>
-              {showTestPanel ? (
-                <ChevronUp className="size-4" style={{ color: 'var(--text-tertiary)' }} />
-              ) : (
-                <ChevronDown className="size-4" style={{ color: 'var(--text-tertiary)' }} />
-              )}
-            </button>
-
-            {showTestPanel && (
-              <div className="mt-4 space-y-3">
-                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  Click any role to auto-fill login credentials. All passwords: <code className="font-mono px-1 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)' }}>JaysDeck2024!</code>
-                </p>
-
-                {TEST_CREDENTIALS.map((cred) => {
-                  const Icon = cred.icon;
-                  return (
-                    <button
-                      key={cred.role}
-                      onClick={() => fillCredentials(cred.email, cred.password)}
-                      className="flex w-full items-start gap-3 rounded-lg p-3 text-left transition-all hover:scale-[0.99] active:scale-[0.97] min-h-[44px]"
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      autoComplete="current-password"
+                      aria-invalid={!!errors.password}
+                      aria-describedby={errors.password ? 'password-error' : undefined}
+                      className="h-11 rounded-lg border px-3 pr-10 text-sm transition-colors focus-visible:ring-2"
                       style={{
                         background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border-primary)',
+                        borderColor: errors.password ? 'var(--danger)' : 'var(--border-primary)',
+                        color: 'var(--text-primary)',
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = cred.color;
-                        e.currentTarget.style.boxShadow = `0 0 12px ${cred.color}20`;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--border-primary)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
+                      {...register('password')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center -mr-3"
+                      style={{ color: 'var(--text-tertiary)' }}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      <div
-                        className="flex size-9 shrink-0 items-center justify-center rounded-md mt-0.5"
-                        style={{ background: `${cred.color}15`, color: cred.color }}
-                      >
-                        <Icon className="size-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                            {cred.role}
-                          </span>
-                          <span
-                            className="rounded px-1.5 py-0.5 font-mono text-[10px]"
-                            style={{ background: `${cred.color}15`, color: cred.color }}
-                          >
-                            {cred.empId}
-                          </span>
-                        </div>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                          {cred.name} &middot; {cred.dept} &middot; {cred.location}
-                        </p>
-                        <p className="font-mono text-[11px] mt-1 truncate" style={{ color: 'var(--text-tertiary)' }}>
-                          {cred.email}
-                        </p>
-                        <p className="text-[10px] mt-1 leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
-                          {cred.access}
-                        </p>
-                      </div>
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </div>
+                  {errors.password && (
+                    <p id="password-error" className="text-xs" style={{ color: 'var(--danger)' }} role="alert">
+                      {errors.password.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Remember Me */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="remember"
+                    className="size-4 rounded border accent-[var(--accent-primary)]"
+                    style={{ borderColor: 'var(--border-secondary)' }}
+                  />
+                  <label
+                    htmlFor="remember"
+                    className="cursor-pointer text-xs"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    Remember me
+                  </label>
+                </div>
+
+                {/* Error Message */}
+                {loginError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-md px-3 py-2 text-center text-sm"
+                    style={{
+                      background: 'var(--danger-subtle)',
+                      color: 'var(--danger)',
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                    }}
+                    role="alert"
+                    aria-live="assertive"
+                  >
+                    {loginError}
+                  </motion.div>
+                )}
+
+                {/* Submit Button with shimmer */}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn-shimmer h-11 w-full cursor-pointer text-sm font-semibold tracking-wide transition-all hover:brightness-90 active:scale-[0.98]"
+                  style={{
+                    background: isSubmitting ? 'var(--accent-primary-hover)' : 'var(--accent-primary)',
+                    color: '#ffffff',
+                    borderRadius: 'var(--radius-md)',
+                  }}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="size-4 animate-spin" />
+                      Authenticating...
+                    </span>
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
+              </form>
+
+              {/* Footer */}
+              <p
+                className="mt-8 text-center text-xs"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
+                TechJays -- The AI Reimagination Company
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Test Credentials Panel */}
+        <motion.div
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.15 }}
+          className="w-full lg:w-[420px] shrink-0"
+        >
+          <Card
+            className="border-0 ring-0"
+            style={{
+              background: 'var(--bg-glass)',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
+              border: '1px solid var(--bg-glass-border)',
+              boxShadow: 'var(--shadow-md)',
+              borderRadius: 'var(--radius-lg)',
+            }}
+          >
+            <CardContent className="px-6 py-5">
+              <button
+                onClick={() => setShowTestPanel(!showTestPanel)}
+                className="flex w-full items-center justify-between min-h-[44px]"
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex size-6 items-center justify-center rounded-md"
+                    style={{ background: 'var(--accent-primary-subtle)' }}
+                  >
+                    <Shield className="size-3.5" style={{ color: 'var(--accent-primary)' }} />
+                  </div>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    Test Credentials
+                  </span>
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-mono uppercase"
+                    style={{
+                      background: 'var(--warning-subtle)',
+                      color: 'var(--warning)',
+                    }}
+                  >
+                    Dev Mode
+                  </span>
+                </div>
+                <motion.div
+                  animate={{ rotate: showTestPanel ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="size-4" style={{ color: 'var(--text-tertiary)' }} />
+                </motion.div>
+              </button>
+
+              {showTestPanel && (
+                <motion.div
+                  variants={credCardStagger}
+                  initial="hidden"
+                  animate="show"
+                  className="mt-4 space-y-3"
+                >
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    Click any role to auto-fill login credentials. All passwords: <code className="font-mono px-1 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)' }}>JaysDeck2024!</code>
+                  </p>
+
+                  {TEST_CREDENTIALS.map((cred) => {
+                    const Icon = cred.icon;
+                    return (
+                      <motion.button
+                        key={cred.role}
+                        variants={credCardItem}
+                        onClick={() => fillCredentials(cred.email, cred.password)}
+                        className="flex w-full items-start gap-3 rounded-lg p-3 text-left transition-all min-h-[44px]"
+                        style={{
+                          background: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-primary)',
+                        }}
+                        whileHover={{
+                          scale: 0.99,
+                          borderColor: cred.color,
+                          boxShadow: `0 0 16px ${cred.color}20`,
+                        }}
+                        whileTap={{ scale: 0.97 }}
+                      >
+                        <div
+                          className="flex size-9 shrink-0 items-center justify-center rounded-md mt-0.5"
+                          style={{ background: `${cred.color}15`, color: cred.color }}
+                        >
+                          <Icon className="size-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                              {cred.role}
+                            </span>
+                            <span
+                              className="rounded px-1.5 py-0.5 font-mono text-[10px]"
+                              style={{ background: `${cred.color}15`, color: cred.color }}
+                            >
+                              {cred.empId}
+                            </span>
+                          </div>
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                            {cred.name} &middot; {cred.dept} &middot; {cred.location}
+                          </p>
+                          <p className="font-mono text-[11px] mt-1 truncate" style={{ color: 'var(--text-tertiary)' }}>
+                            {cred.email}
+                          </p>
+                          <p className="text-[10px] mt-1 leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+                            {cred.access}
+                          </p>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </div>
   );

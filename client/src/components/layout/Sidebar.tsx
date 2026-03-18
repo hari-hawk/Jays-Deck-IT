@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   Monitor,
@@ -63,33 +63,59 @@ function NavItem({
         'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-secondary)]',
         isActive
           ? 'text-[var(--text-primary)]'
-          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
+          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
         isCollapsed && 'justify-center px-0'
       )}
       style={
         isActive
           ? {
               background: 'var(--accent-primary-subtle)',
-              borderLeft: '3px solid var(--accent-primary)',
-              paddingLeft: isCollapsed ? '0' : '9px',
             }
           : undefined
       }
     >
-      <Icon className="size-5 shrink-0" />
-      {!isCollapsed && (
-        <>
-          <span
-            className="font-mono text-xs tracking-wider"
-            style={{ color: 'var(--text-tertiary)' }}
-          >
-            [{item.section}]
-          </span>
-          <span className="truncate text-xs font-semibold uppercase tracking-wider">
-            {item.label}
-          </span>
-        </>
+      {/* Animated hover background that slides in from left */}
+      {!isActive && (
+        <span
+          className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          style={{ background: 'var(--bg-tertiary)' }}
+          aria-hidden="true"
+        />
       )}
+
+      {/* Animated active indicator - left border with spring */}
+      {isActive && (
+        <motion.span
+          layoutId="sidebar-active-indicator"
+          className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full"
+          style={{ background: 'var(--accent-primary)' }}
+          transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+          aria-hidden="true"
+        />
+      )}
+
+      <Icon className="relative z-10 size-5 shrink-0" />
+      <AnimatePresence mode="wait">
+        {!isCollapsed && (
+          <motion.div
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: 'auto' }}
+            exit={{ opacity: 0, width: 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex items-center gap-2 overflow-hidden relative z-10"
+          >
+            <span
+              className="font-mono text-xs tracking-wider whitespace-nowrap"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              [{item.section}]
+            </span>
+            <span className="truncate text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+              {item.label}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Link>
   );
 
@@ -146,7 +172,7 @@ export function Sidebar() {
                 className="text-lg font-extrabold tracking-tight"
                 style={{ color: 'var(--text-primary)' }}
               >
-                J<span style={{ color: 'var(--accent-primary)' }}>D</span>
+                J<span className="logo-glow" style={{ color: 'var(--accent-primary)' }}>D</span>
               </span>
             </button>
           ) : (
@@ -156,7 +182,7 @@ export function Sidebar() {
                 style={{ color: 'var(--text-primary)' }}
               >
                 JAYS{' '}
-                <span style={{ color: 'var(--accent-primary)' }}>DECK</span>
+                <span className="logo-glow" style={{ color: 'var(--accent-primary)' }}>DECK</span>
               </span>
               <button
                 onClick={toggle}
@@ -253,8 +279,9 @@ export function Sidebar() {
         {/* User Section */}
         <div
           className={cn(
-            'flex shrink-0 items-center gap-3 p-4',
-            isCollapsed && 'justify-center px-0 py-4'
+            'flex shrink-0 items-center gap-3 p-4 transition-all duration-200 rounded-lg mx-1 mb-1',
+            isCollapsed && 'justify-center px-0 py-4',
+            'hover-glow'
           )}
         >
           <Link href="/profile" className="flex items-center gap-3 min-w-0">
@@ -269,22 +296,30 @@ export function Sidebar() {
                 HV
               </AvatarFallback>
             </Avatar>
-            {!isCollapsed && (
-              <div className="flex flex-col overflow-hidden">
-                <span
-                  className="truncate text-sm font-medium"
-                  style={{ color: 'var(--text-primary)' }}
+            <AnimatePresence mode="wait">
+              {!isCollapsed && (
+                <motion.div
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col overflow-hidden"
                 >
-                  Hari Verman
-                </span>
-                <span
-                  className="truncate text-xs"
-                  style={{ color: 'var(--text-tertiary)' }}
-                >
-                  Super Admin
-                </span>
-              </div>
-            )}
+                  <span
+                    className="truncate text-sm font-medium whitespace-nowrap"
+                    style={{ color: 'var(--text-primary)' }}
+                  >
+                    Hari Verman
+                  </span>
+                  <span
+                    className="truncate text-xs whitespace-nowrap"
+                    style={{ color: 'var(--text-tertiary)' }}
+                  >
+                    Super Admin
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </Link>
         </div>
       </motion.aside>

@@ -2,6 +2,7 @@
 
 import { type LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { AnimatedNumber } from '@/components/ui/animations';
 
 interface MetricCardProps {
   title: string;
@@ -11,6 +12,11 @@ interface MetricCardProps {
 }
 
 export function MetricCard({ title, value, icon: Icon, trend }: MetricCardProps) {
+  const numericValue = typeof value === 'string' ? parseFloat(value) : value;
+  const isNumeric = !isNaN(numericValue) && typeof value === 'number';
+  const isPercentage = typeof value === 'string' && value.endsWith('%');
+  const percentNum = isPercentage ? parseFloat(value) : 0;
+
   return (
     <motion.div
       whileHover={{ y: -2, boxShadow: 'var(--shadow-glow)' }}
@@ -27,6 +33,13 @@ export function MetricCard({ title, value, icon: Icon, trend }: MetricCardProps)
         (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-primary)';
       }}
     >
+      {/* Subtle top accent line */}
+      <div
+        className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{ background: 'var(--accent-primary)' }}
+        aria-hidden="true"
+      />
+
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div
@@ -40,7 +53,15 @@ export function MetricCard({ title, value, icon: Icon, trend }: MetricCardProps)
               className="text-3xl font-bold tracking-tight"
               style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}
             >
-              {value}
+              {isNumeric ? (
+                <AnimatedNumber value={numericValue} duration={1.2} />
+              ) : isPercentage ? (
+                <>
+                  <AnimatedNumber value={percentNum} duration={1.2} />%
+                </>
+              ) : (
+                value
+              )}
             </p>
             <p
               className="mt-1 text-xs font-medium uppercase tracking-widest"

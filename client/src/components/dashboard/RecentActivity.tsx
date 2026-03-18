@@ -1,5 +1,6 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, UserCheck, CheckCircle, LogIn } from 'lucide-react';
 import { type LucideIcon } from 'lucide-react';
 
@@ -43,13 +44,16 @@ function formatRelativeTime(timestamp: string): string {
 export function RecentActivity({ data }: RecentActivityProps) {
   return (
     <div className="space-y-0 divide-y" style={{ borderColor: 'var(--border-primary)' }}>
-      {data.map((entry) => {
+      {data.map((entry, index) => {
         const config = ACTION_CONFIG[entry.action] || ACTION_CONFIG.UPDATE;
         const Icon = config.icon;
 
         return (
-          <div
+          <motion.div
             key={entry.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.3, ease: 'easeOut' }}
             className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
             style={{ borderColor: 'var(--border-primary)' }}
           >
@@ -79,7 +83,7 @@ export function RecentActivity({ data }: RecentActivityProps) {
             >
               {formatRelativeTime(entry.timestamp)}
             </span>
-          </div>
+          </motion.div>
         );
       })}
     </div>

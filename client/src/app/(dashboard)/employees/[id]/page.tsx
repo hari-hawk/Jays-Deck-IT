@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { mockEmployees, mockAssets, mockTickets } from '@/lib/mock-data';
 
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -34,6 +35,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
   return (
     <ErrorBoundary fallbackTitle="Employee profile failed to load">
+      <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
         <Link
           href="/employees"
@@ -157,6 +159,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
           </TabsContent>
         </Tabs>
       </div>
+      </PageTransition>
     </ErrorBoundary>
   );
 }

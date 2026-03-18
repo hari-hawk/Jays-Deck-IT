@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { mockEmployees } from '@/lib/mock-data';
 
 const container = {
@@ -49,6 +50,7 @@ export default function EmployeesPage() {
 
   return (
     <ErrorBoundary fallbackTitle="People Link failed to load">
+      <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
         <PageHeader
           index="02"
@@ -116,7 +118,7 @@ export default function EmployeesPage() {
             className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
           >
             {filtered.map((emp) => (
-              <motion.div key={emp.id} variants={item}>
+              <motion.div key={emp.id} variants={item} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
                 <Link href={`/employees/${emp.id}`}>
                   <div
                     className="group rounded-xl border p-5 transition-all hover:shadow-md"
@@ -158,6 +160,7 @@ export default function EmployeesPage() {
           />
         )}
       </div>
+      </PageTransition>
     </ErrorBoundary>
   );
 }

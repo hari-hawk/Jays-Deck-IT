@@ -23,14 +23,18 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> =
   CRITICAL: { bg: 'var(--danger-subtle)', text: 'var(--danger)', dot: 'var(--danger)' },
 };
 
+const PULSE_STATUSES = new Set(['CRITICAL', 'ESCALATED']);
+
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
   const style = STATUS_STYLES[status] || STATUS_STYLES.ACTIVE;
   const label = status.replace(/_/g, ' ');
+  const shouldPulse = PULSE_STATUSES.has(status);
 
   return (
     <span
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider',
+        shouldPulse && 'badge-pulse-critical',
         className
       )}
       style={{
