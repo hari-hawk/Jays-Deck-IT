@@ -9,8 +9,9 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { mockTickets } from '@/lib/mock-data';
+import { useTicket, useAddComment } from '@/lib/queries';
 import { toast } from 'sonner';
 
 function formatDateTime(dateStr: string) {
@@ -33,12 +34,24 @@ function formatTimeAgo(dateStr: string) {
   return `${diffDays}d ago`;
 }
 
+interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  author: { id: string; firstName: string; lastName: string; avatarUrl?: string };
+}
+
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const ticket = mockTickets.find((t) => t.id === id);
+  const { data: ticket, isLoading, error } = useTicket(id);
+  const addComment = useAddComment(id);
   const [comment, setComment] = useState('');
 
-  if (!ticket) {
+  if (isLoading) {
+    return <PageSkeleton type="list" count={1} />;
+  }
+
+  if (error || !ticket) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <EmptyState
@@ -52,11 +65,20 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const handleSubmitComment = (e: React.FormEvent) => {
+  const reporterName = ticket.reporter ? `${ticket.reporter.firstName} ${ticket.reporter.lastName}` : 'Unknown';
+  const assigneeName = ticket.assignee ? `${ticket.assignee.firstName} ${ticket.assignee.lastName}` : 'Unassigned';
+  const comments: Comment[] = ticket.comments || [];
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim()) return;
-    toast.success('Comment added');
-    setComment('');
+    try {
+      await addComment.mutateAsync({ content: comment });
+      toast.success('Comment added');
+      setComment('');
+    } catch {
+      toast.error('Failed to add comment');
+    }
   };
 
   return (
@@ -82,14 +104,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="font-mono text-sm font-bold" style={{ color: 'var(--accent-primary)' }}>{ticket.ticketId}</span>
+                <span className="font-mono text-sm font-bold" style={{ color: 'var(--accent-primary)' }}>{ticket.ticketNumber}</span>
                 <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
                   {ticket.category}
                 </span>
               </div>
               <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{ticket.title}</h1>
               <p className="mt-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                Created by {ticket.createdBy} {formatTimeAgo(ticket.createdAt)}
+                Created by {reporterName} {formatTimeAgo(ticket.createdAt)}
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -127,33 +149,37 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
             >
               <h3 className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-                Comments ({ticket.comments.length})
+                Comments ({comments.length})
               </h3>
               <div className="space-y-4">
-                {ticket.comments.length > 0 ? (
-                  ticket.comments.map((c) => (
-                    <div key={c.id} className="flex gap-3">
-                      <Avatar size="sm">
-                        <AvatarFallback
-                          className="text-[10px] font-bold"
-                          style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}
-                        >
-                          {c.author.split(' ').map((n) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{c.author}</span>
-                          <span className="text-xs" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-                            {formatTimeAgo(c.createdAt)}
-                          </span>
+                {comments.length > 0 ? (
+                  comments.map((c) => {
+                    const authorName = c.author ? `${c.author.firstName} ${c.author.lastName}` : 'Unknown';
+                    const authorInitials = c.author ? `${c.author.firstName[0]}${c.author.lastName[0]}` : '?';
+                    return (
+                      <div key={c.id} className="flex gap-3">
+                        <Avatar size="sm">
+                          <AvatarFallback
+                            className="text-[10px] font-bold"
+                            style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}
+                          >
+                            {authorInitials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{authorName}</span>
+                            <span className="text-xs" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                              {formatTimeAgo(c.createdAt)}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                            {c.content}
+                          </p>
                         </div>
-                        <p className="mt-1 text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                          {c.content}
-                        </p>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No comments yet.</p>
                 )}
@@ -173,7 +199,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <Button
                   type="submit"
                   size="icon"
-                  disabled={!comment.trim()}
+                  disabled={!comment.trim() || addComment.isPending}
                   className="min-h-[44px] min-w-[44px]"
                   style={{ background: 'var(--accent-primary)', color: '#fff' }}
                   aria-label="Send comment"
@@ -196,8 +222,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 Details
               </h3>
               <div className="space-y-4">
-                <DetailRow icon={User} label="Created By" value={ticket.createdBy} />
-                <DetailRow icon={User} label="Assignee" value={ticket.assignee || 'Unassigned'} />
+                <DetailRow icon={User} label="Created By" value={reporterName} />
+                <DetailRow icon={User} label="Assignee" value={assigneeName} />
                 <DetailRow icon={Clock} label="Created" value={formatDateTime(ticket.createdAt)} />
                 <DetailRow icon={Clock} label="Updated" value={formatDateTime(ticket.updatedAt)} />
               </div>
@@ -212,7 +238,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <div className="flex items-start gap-3">
                   <div className="mt-1.5 size-2 rounded-full" style={{ background: 'var(--accent-primary)' }} aria-hidden="true" />
                   <div>
-                    <p className="text-sm" style={{ color: 'var(--text-primary)' }}>Status: {ticket.status.replace(/_/g, ' ')}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-primary)' }}>Status: {(ticket.status || '').replace(/_/g, ' ')}</p>
                     <p className="text-xs" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>{formatTimeAgo(ticket.updatedAt)}</p>
                   </div>
                 </div>

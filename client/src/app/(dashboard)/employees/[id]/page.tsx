@@ -9,14 +9,50 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { mockEmployees, mockAssets, mockTickets } from '@/lib/mock-data';
+import { useEmployee } from '@/lib/queries';
+import { api } from '@/lib/api';
+import { useState, useEffect } from 'react';
+
+interface UserAsset {
+  id: string;
+  name: string;
+  assetTag: string;
+  status: string;
+}
+
+interface UserTicket {
+  id: string;
+  ticketNumber: string;
+  title: string;
+  priority: string;
+  status: string;
+}
 
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const employee = mockEmployees.find((e) => e.id === id);
+  const { data: employee, isLoading, error } = useEmployee(id);
+  const [assignedAssets, setAssignedAssets] = useState<UserAsset[]>([]);
+  const [employeeTickets, setEmployeeTickets] = useState<UserTicket[]>([]);
 
-  if (!employee) {
+  useEffect(() => {
+    if (!id) return;
+    // Fetch assets assigned to this user
+    api.get(`/users/${id}/assets`).then(res => {
+      setAssignedAssets(res.data.data || []);
+    }).catch(() => {});
+    // Fetch tickets by this user
+    api.get(`/users/${id}/tickets`).then(res => {
+      setEmployeeTickets(res.data.data || []);
+    }).catch(() => {});
+  }, [id]);
+
+  if (isLoading) {
+    return <PageSkeleton type="list" count={1} />;
+  }
+
+  if (error || !employee) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <EmptyState
@@ -30,8 +66,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  const assignedAssets = mockAssets.filter((a) => a.assigneeId === id);
-  const employeeTickets = mockTickets.filter((t) => t.createdById === id);
+  const initials = `${employee.firstName?.[0] || ''}${employee.lastName?.[0] || ''}`;
 
   return (
     <ErrorBoundary fallbackTitle="Employee profile failed to load">
@@ -59,7 +94,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                   className="text-lg font-bold"
                   style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}
                 >
-                  {employee.avatarInitials}
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -94,17 +129,17 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                   Contact
                 </h3>
                 <InfoRow icon={Mail} label="Email" value={employee.email} />
-                <InfoRow icon={Phone} label="Phone" value={employee.phone} />
-                <InfoRow icon={MapPin} label="Location" value={employee.location} />
+                <InfoRow icon={Phone} label="Phone" value={employee.phone || 'N/A'} />
+                <InfoRow icon={MapPin} label="Location" value={employee.location || 'N/A'} />
               </div>
               <div className="space-y-4 rounded-xl border p-5" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
                 <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
                   Organization
                 </h3>
-                <InfoRow icon={Building} label="Department" value={employee.department} />
-                <InfoRow icon={Calendar} label="Join Date" value={employee.joinDate} />
-                <InfoRow icon={Monitor} label="Assigned Assets" value={String(employee.assignedAssets)} />
-                <InfoRow icon={Ticket} label="Open Tickets" value={String(employee.openTickets)} />
+                <InfoRow icon={Building} label="Department" value={employee.department || 'N/A'} />
+                <InfoRow icon={Calendar} label="Join Date" value={employee.joinDate ? new Date(employee.joinDate).toLocaleDateString() : 'N/A'} />
+                <InfoRow icon={Monitor} label="Assigned Assets" value={String(assignedAssets.length)} />
+                <InfoRow icon={Ticket} label="Open Tickets" value={String(employeeTickets.filter((t: UserTicket) => !['RESOLVED', 'CLOSED'].includes(t.status)).length)} />
               </div>
             </div>
           </TabsContent>
@@ -142,7 +177,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                   >
                     <div>
                       <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{ticket.title}</p>
-                      <p className="text-xs font-mono" style={{ color: 'var(--accent-primary)' }}>{ticket.ticketId}</p>
+                      <p className="text-xs font-mono" style={{ color: 'var(--accent-primary)' }}>{ticket.ticketNumber}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <StatusBadge status={ticket.priority} />

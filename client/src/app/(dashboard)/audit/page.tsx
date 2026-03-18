@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, UserCheck, CheckCircle, LogIn, AlertTriangle, ScrollText } from 'lucide-react';
 import { type LucideIcon } from 'lucide-react';
@@ -10,7 +10,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { mockAuditEntries } from '@/lib/mock-data';
+import { useAuditLogs } from '@/lib/queries';
 
 const ACTION_CONFIG: Record<string, { icon: LucideIcon; color: string }> = {
   CREATE: { icon: Plus, color: 'var(--success)' },
@@ -29,29 +29,53 @@ function formatDateTime(dateStr: string) {
     d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
+interface AuditEntry {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  description: string;
+  user?: { id: string; firstName: string; lastName: string; email: string };
+  userId: string;
+  ipAddress?: string;
+  createdAt: string;
+  metadata?: Record<string, string>;
+}
+
 export default function AuditPage() {
   const [entityFilter, setEntityFilter] = useState('ALL');
   const [actionFilter, setActionFilter] = useState('ALL');
   const [userFilter, setUserFilter] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+  const { data: auditEntries, isLoading, error } = useAuditLogs({
+    entityType: entityFilter !== 'ALL' ? entityFilter : undefined,
+    action: actionFilter !== 'ALL' ? actionFilter : undefined,
+  });
 
   if (isLoading) {
     return <PageSkeleton type="list" count={6} />;
   }
 
-  const entityTypes = [...new Set(mockAuditEntries.map((e) => e.entityType))];
-  const actionTypes = [...new Set(mockAuditEntries.map((e) => e.action))];
+  if (error) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={ScrollText}
+          title="Failed to load audit trail"
+          description="There was an error loading the audit logs. Please try again."
+        />
+      </div>
+    );
+  }
 
-  const filtered = mockAuditEntries.filter((entry) => {
-    const matchesEntity = entityFilter === 'ALL' || entry.entityType === entityFilter;
-    const matchesAction = actionFilter === 'ALL' || entry.action === actionFilter;
-    const matchesUser = !userFilter || entry.user.toLowerCase().includes(userFilter.toLowerCase());
-    return matchesEntity && matchesAction && matchesUser;
+  const entries: AuditEntry[] = auditEntries || [];
+  const entityTypes = [...new Set(entries.map((e) => e.entityType).filter(Boolean))];
+  const actionTypes = [...new Set(entries.map((e) => e.action).filter(Boolean))];
+
+  const filtered = entries.filter((entry) => {
+    const userName = entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : '';
+    const matchesUser = !userFilter || userName.toLowerCase().includes(userFilter.toLowerCase());
+    return matchesUser;
   });
 
   return (
@@ -124,6 +148,7 @@ export default function AuditPage() {
             {filtered.map((entry, idx) => {
               const config = ACTION_CONFIG[entry.action] || ACTION_CONFIG.UPDATE;
               const Icon = config.icon;
+              const userName = entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'System';
 
               return (
                 <motion.div
@@ -147,17 +172,19 @@ export default function AuditPage() {
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-3">
                       <span className="text-xs" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-                        {formatDateTime(entry.timestamp)}
+                        {formatDateTime(entry.createdAt)}
                       </span>
                       <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                        by {entry.user}
+                        by {userName}
                       </span>
                       <span className="text-xs font-mono" style={{ color: 'var(--accent-primary)' }}>
                         {entry.entityId}
                       </span>
-                      <span className="text-xs" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-                        IP: {entry.ipAddress}
-                      </span>
+                      {entry.ipAddress && (
+                        <span className="text-xs" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                          IP: {entry.ipAddress}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span

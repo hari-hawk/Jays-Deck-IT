@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth, requireMinRole } from '@/lib/auth-helpers';
+import { createNotification } from '@/lib/notifications';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -71,6 +72,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         },
       }),
     ]);
+
+    // Notify the assignee about the asset assignment
+    try {
+      await createNotification({
+        userId,
+        title: 'Asset assigned to you',
+        message: `Asset ${asset.name} (${asset.assetTag}) has been assigned to you`,
+        type: 'ASSET_ASSIGNED',
+        link: `/assets/${id}`,
+      });
+    } catch {
+      // Notification failure should not break asset assignment
+    }
 
     return NextResponse.json({ success: true, data: updatedAsset });
   } catch (err: unknown) {

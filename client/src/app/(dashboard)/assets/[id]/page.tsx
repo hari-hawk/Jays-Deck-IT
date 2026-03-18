@@ -8,14 +8,19 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { mockAssets } from '@/lib/mock-data';
+import { useAsset } from '@/lib/queries';
 
 export default function AssetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const asset = mockAssets.find((a) => a.id === id);
+  const { data: asset, isLoading, error } = useAsset(id);
 
-  if (!asset) {
+  if (isLoading) {
+    return <PageSkeleton type="list" count={1} />;
+  }
+
+  if (error || !asset) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <EmptyState
@@ -28,6 +33,10 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
       </div>
     );
   }
+
+  const assigneeName = asset.currentAssignee
+    ? `${asset.currentAssignee.firstName} ${asset.currentAssignee.lastName}`
+    : 'Unassigned';
 
   return (
     <ErrorBoundary fallbackTitle="Asset details failed to load">
@@ -91,21 +100,21 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
                   Details
                 </h3>
-                <InfoRow icon={Hash} label="Serial Number" value={asset.serialNumber} />
-                <InfoRow icon={Monitor} label="Category" value={asset.category.replace(/_/g, ' ')} />
-                <InfoRow icon={MapPin} label="Location" value={asset.location} />
-                <InfoRow icon={FileText} label="Department" value={asset.department} />
-                <InfoRow icon={User} label="Assignee" value={asset.assignee || 'Unassigned'} />
+                <InfoRow icon={Hash} label="Serial Number" value={asset.serialNumber || 'N/A'} />
+                <InfoRow icon={Monitor} label="Category" value={(asset.category || '').replace(/_/g, ' ')} />
+                <InfoRow icon={MapPin} label="Location" value={asset.location || 'N/A'} />
+                <InfoRow icon={FileText} label="Department" value={asset.department || 'N/A'} />
+                <InfoRow icon={User} label="Assignee" value={assigneeName} />
               </div>
               <div className="space-y-4 rounded-xl border p-5" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
                 <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
                   Warranty & Dates
                 </h3>
-                <InfoRow icon={Calendar} label="Purchase Date" value={asset.purchaseDate} />
-                <InfoRow icon={Wrench} label="Warranty Expiry" value={asset.warrantyExpiry} />
+                <InfoRow icon={Calendar} label="Purchase Date" value={asset.purchaseDate ? new Date(asset.purchaseDate).toLocaleDateString() : 'N/A'} />
+                <InfoRow icon={Wrench} label="Warranty Expiry" value={asset.warrantyExpiry ? new Date(asset.warrantyExpiry).toLocaleDateString() : 'N/A'} />
                 <div className="pt-4">
                   <h4 className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>Notes</h4>
-                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{asset.notes}</p>
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{asset.notes || 'No notes'}</p>
                 </div>
               </div>
             </motion.div>
@@ -114,29 +123,48 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
           <TabsContent value={1} className="mt-6">
             <div className="rounded-xl border p-6" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
               <div className="space-y-4">
-                {[
-                  { date: '2024-09-15', action: 'Assigned to ' + (asset.assignee || 'N/A'), by: 'James Wilson' },
-                  { date: '2024-06-20', action: 'Added to inventory', by: 'System' },
-                ].map((entry, idx) => (
-                  <div key={idx} className="flex items-start gap-3 pb-4" style={{ borderBottom: idx < 1 ? '1px solid var(--border-primary)' : 'none' }}>
-                    <div className="mt-1 size-2 rounded-full" style={{ background: 'var(--accent-primary)' }} aria-hidden="true" />
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{entry.action}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-                        {entry.date} by {entry.by}
-                      </p>
+                {asset.assignments && asset.assignments.length > 0 ? (
+                  asset.assignments.map((entry: { id: string; assignedAt: string; returnedAt?: string; user?: { firstName: string; lastName: string }; assignedBy?: { firstName: string; lastName: string } }, idx: number) => (
+                    <div key={entry.id} className="flex items-start gap-3 pb-4" style={{ borderBottom: idx < asset.assignments.length - 1 ? '1px solid var(--border-primary)' : 'none' }}>
+                      <div className="mt-1 size-2 rounded-full" style={{ background: 'var(--accent-primary)' }} aria-hidden="true" />
+                      <div>
+                        <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                          {entry.returnedAt ? 'Returned' : 'Assigned to'} {entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : 'N/A'}
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                          {new Date(entry.assignedAt).toLocaleDateString()} by {entry.assignedBy ? `${entry.assignedBy.firstName} ${entry.assignedBy.lastName}` : 'System'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No assignment history.</p>
+                )}
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value={2} className="mt-6">
             <div className="rounded-xl border p-6" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
-              <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-                No linked tickets found for this asset.
-              </p>
+              {asset.tickets && asset.tickets.length > 0 ? (
+                <div className="space-y-3">
+                  {asset.tickets.map((ticket: { id: string; ticketNumber: string; title: string; status: string }) => (
+                    <Link key={ticket.id} href={`/tickets/${ticket.id}`}>
+                      <div className="flex items-center justify-between rounded-lg border p-3 hover:shadow-sm transition-all" style={{ borderColor: 'var(--border-primary)' }}>
+                        <div>
+                          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{ticket.title}</p>
+                          <p className="text-xs font-mono" style={{ color: 'var(--accent-primary)' }}>{ticket.ticketNumber}</p>
+                        </div>
+                        <StatusBadge status={ticket.status} />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                  No linked tickets found for this asset.
+                </p>
+              )}
             </div>
           </TabsContent>
         </Tabs>

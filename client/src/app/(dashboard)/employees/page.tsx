@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, Users } from 'lucide-react';
@@ -12,7 +12,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { mockEmployees } from '@/lib/mock-data';
+import { useEmployees } from '@/lib/queries';
 
 const container = {
   hidden: { opacity: 0 },
@@ -24,29 +24,48 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
 };
 
+interface Employee {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string;
+  designation: string;
+  location: string;
+  status: string;
+}
+
 export default function EmployeesPage() {
   const [search, setSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+  const { data: employees, isLoading, error } = useEmployees({
+    search: search || undefined,
+    department: departmentFilter !== 'ALL' ? departmentFilter : undefined,
+    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+  });
 
   if (isLoading) {
     return <PageSkeleton type="cards" count={8} />;
   }
 
-  const departments = [...new Set(mockEmployees.map((e) => e.department))];
+  if (error) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={Users}
+          title="Failed to load employees"
+          description="There was an error loading the employee directory. Please try again."
+        />
+      </div>
+    );
+  }
 
-  const filtered = mockEmployees.filter((emp) => {
-    const matchesSearch = !search || `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(search.toLowerCase()) || emp.email.toLowerCase().includes(search.toLowerCase());
-    const matchesDept = departmentFilter === 'ALL' || emp.department === departmentFilter;
-    const matchesStatus = statusFilter === 'ALL' || emp.status === statusFilter;
-    return matchesSearch && matchesDept && matchesStatus;
-  });
+  const filtered: Employee[] = employees || [];
+
+  // Extract unique departments for filter dropdown
+  const departments = [...new Set(filtered.map((e: Employee) => e.department).filter(Boolean))];
 
   return (
     <ErrorBoundary fallbackTitle="People Link failed to load">
@@ -117,40 +136,43 @@ export default function EmployeesPage() {
             animate="show"
             className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
           >
-            {filtered.map((emp) => (
-              <motion.div key={emp.id} variants={item} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
-                <Link href={`/employees/${emp.id}`}>
-                  <div
-                    className="group rounded-xl border p-5 transition-all hover:shadow-md"
-                    style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-secondary)'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-primary)'; }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Avatar size="default">
-                        <AvatarFallback
-                          className="text-xs font-bold"
-                          style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}
-                        >
-                          {emp.avatarInitials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                          {emp.firstName} {emp.lastName}
-                        </h3>
-                        <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{emp.designation}</p>
-                        <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>{emp.department}</p>
+            {filtered.map((emp: Employee) => {
+              const initials = `${emp.firstName?.[0] || ''}${emp.lastName?.[0] || ''}`;
+              return (
+                <motion.div key={emp.id} variants={item} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+                  <Link href={`/employees/${emp.id}`}>
+                    <div
+                      className="group rounded-xl border p-5 transition-all hover:shadow-md"
+                      style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-secondary)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-primary)'; }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar size="default">
+                          <AvatarFallback
+                            className="text-xs font-bold"
+                            style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}
+                          >
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                            {emp.firstName} {emp.lastName}
+                          </h3>
+                          <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{emp.designation}</p>
+                          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>{emp.department}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{emp.location}</span>
+                        <StatusBadge status={emp.status} />
                       </div>
                     </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{emp.location}</span>
-                      <StatusBadge status={emp.status} />
-                    </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
+                  </Link>
+                </motion.div>
+              );
+            })}
           </motion.div>
         ) : (
           <EmptyState

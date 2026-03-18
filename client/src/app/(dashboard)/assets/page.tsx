@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, Plus, LayoutGrid, List, Monitor, Laptop, Smartphone, Headphones, HardDrive, FileCode, Package } from 'lucide-react';
@@ -12,7 +12,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { mockAssets, type MockAsset } from '@/lib/mock-data';
+import { useAssets } from '@/lib/queries';
 
 const CATEGORY_ICONS: Record<string, typeof Monitor> = {
   LAPTOP: Laptop,
@@ -34,28 +34,44 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
 };
 
+interface Asset {
+  id: string;
+  name: string;
+  assetTag: string;
+  category: string;
+  status: string;
+  currentAssignee?: { id: string; firstName: string; lastName: string } | null;
+}
+
 export default function AssetsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+  const { data: assets, isLoading, error } = useAssets({
+    search: search || undefined,
+    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+    category: categoryFilter !== 'ALL' ? categoryFilter : undefined,
+  });
 
   if (isLoading) {
     return <PageSkeleton type="cards" count={8} />;
   }
 
-  const filtered = mockAssets.filter((asset) => {
-    const matchesSearch = !search || asset.name.toLowerCase().includes(search.toLowerCase()) || asset.assetTag.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'ALL' || asset.status === statusFilter;
-    const matchesCategory = categoryFilter === 'ALL' || asset.category === categoryFilter;
-    return matchesSearch && matchesStatus && matchesCategory;
-  });
+  if (error) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={Package}
+          title="Failed to load assets"
+          description="There was an error loading the assets. Please try again."
+        />
+      </div>
+    );
+  }
+
+  const filtered = assets || [];
 
   return (
     <ErrorBoundary fallbackTitle="Asset Vault failed to load">
@@ -166,7 +182,7 @@ export default function AssetsPage() {
               animate="show"
               className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
             >
-              {filtered.map((asset) => (
+              {filtered.map((asset: Asset) => (
                 <AssetCard key={asset.id} asset={asset} />
               ))}
             </motion.div>
@@ -188,7 +204,7 @@ export default function AssetsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((asset) => (
+                  {filtered.map((asset: Asset) => (
                     <tr
                       key={asset.id}
                       className="transition-colors hover:bg-[var(--bg-tertiary)]"
@@ -209,7 +225,7 @@ export default function AssetsPage() {
                         <StatusBadge status={asset.status} />
                       </td>
                       <td className="border-b px-4 py-3 hidden lg:table-cell text-sm" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-primary)' }}>
-                        {asset.assignee || '\u2014'}
+                        {asset.currentAssignee ? `${asset.currentAssignee.firstName} ${asset.currentAssignee.lastName}` : '\u2014'}
                       </td>
                     </tr>
                   ))}
@@ -232,8 +248,11 @@ export default function AssetsPage() {
   );
 }
 
-function AssetCard({ asset }: { asset: MockAsset }) {
+function AssetCard({ asset }: { asset: Asset }) {
   const Icon = CATEGORY_ICONS[asset.category] || Package;
+  const assigneeName = asset.currentAssignee
+    ? `${asset.currentAssignee.firstName} ${asset.currentAssignee.lastName}`
+    : null;
 
   return (
     <motion.div variants={item} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
@@ -259,9 +278,9 @@ function AssetCard({ asset }: { asset: MockAsset }) {
           <p className="mt-1 font-mono text-xs" style={{ color: 'var(--accent-primary)' }}>
             {asset.assetTag}
           </p>
-          {asset.assignee && (
+          {assigneeName && (
             <p className="mt-2 text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
-              Assigned to {asset.assignee}
+              Assigned to {assigneeName}
             </p>
           )}
         </div>

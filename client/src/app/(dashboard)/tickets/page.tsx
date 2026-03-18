@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, Plus, Ticket } from 'lucide-react';
@@ -12,7 +12,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { mockTickets } from '@/lib/mock-data';
+import { useTickets } from '@/lib/queries';
 
 function formatTimeAgo(dateStr: string) {
   const now = Date.now();
@@ -27,29 +27,48 @@ function formatTimeAgo(dateStr: string) {
   return `${diffDays}d ago`;
 }
 
+interface TicketItem {
+  id: string;
+  ticketNumber: string;
+  title: string;
+  category: string;
+  priority: string;
+  status: string;
+  reporter?: { id: string; firstName: string; lastName: string };
+  assignee?: { id: string; firstName: string; lastName: string } | null;
+  createdAt: string;
+}
+
 export default function TicketsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+  const { data: tickets, isLoading, error } = useTickets({
+    search: search || undefined,
+    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+    priority: priorityFilter !== 'ALL' ? priorityFilter : undefined,
+    category: categoryFilter !== 'ALL' ? categoryFilter : undefined,
+  });
 
   if (isLoading) {
     return <PageSkeleton type="list" count={6} />;
   }
 
-  const filtered = mockTickets.filter((ticket) => {
-    const matchesSearch = !search || ticket.title.toLowerCase().includes(search.toLowerCase()) || ticket.ticketId.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'ALL' || ticket.status === statusFilter;
-    const matchesPriority = priorityFilter === 'ALL' || ticket.priority === priorityFilter;
-    const matchesCategory = categoryFilter === 'ALL' || ticket.category === categoryFilter;
-    return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
-  });
+  if (error) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={Ticket}
+          title="Failed to load tickets"
+          description="There was an error loading the tickets. Please try again."
+        />
+      </div>
+    );
+  }
+
+  const filtered: TicketItem[] = tickets || [];
 
   return (
     <ErrorBoundary fallbackTitle="Service Hub failed to load">
@@ -130,13 +149,13 @@ export default function TicketsPage() {
             style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
           >
             <option value="ALL">All Categories</option>
-            <option value="Hardware">Hardware</option>
-            <option value="Software">Software</option>
-            <option value="Network">Network</option>
-            <option value="Access Request">Access Request</option>
-            <option value="Security">Security</option>
-            <option value="General IT">General IT</option>
-            <option value="Other">Other</option>
+            <option value="HARDWARE">Hardware</option>
+            <option value="SOFTWARE">Software</option>
+            <option value="NETWORK">Network</option>
+            <option value="ACCESS_REQUEST">Access Request</option>
+            <option value="SECURITY">Security</option>
+            <option value="GENERAL">General IT</option>
+            <option value="OTHER">Other</option>
           </select>
         </motion.div>
 
@@ -169,7 +188,7 @@ export default function TicketsPage() {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono text-xs" style={{ color: 'var(--accent-primary)' }}>{ticket.ticketId}</span>
+                          <span className="font-mono text-xs" style={{ color: 'var(--accent-primary)' }}>{ticket.ticketNumber}</span>
                           <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
                             {ticket.category}
                           </span>
@@ -178,8 +197,8 @@ export default function TicketsPage() {
                           {ticket.title}
                         </h3>
                         <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                          Created by {ticket.createdBy} {formatTimeAgo(ticket.createdAt)}
-                          {ticket.assignee && <> &middot; Assigned to {ticket.assignee}</>}
+                          Created by {ticket.reporter ? `${ticket.reporter.firstName} ${ticket.reporter.lastName}` : 'Unknown'} {formatTimeAgo(ticket.createdAt)}
+                          {ticket.assignee && <> &middot; Assigned to {ticket.assignee.firstName} {ticket.assignee.lastName}</>}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">

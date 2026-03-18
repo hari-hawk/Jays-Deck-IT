@@ -150,6 +150,79 @@ export function useDashboardStats() {
   });
 }
 
+// ── Dashboard (charts) ──
+export function useTicketTrends() {
+  return useQuery({
+    queryKey: ['dashboard', 'ticketTrends'],
+    queryFn: async () => {
+      const { data } = await api.get('/dashboard/tickets/trends');
+      return data.data;
+    },
+  });
+}
+
+export function useAssetOverview() {
+  return useQuery({
+    queryKey: ['dashboard', 'assetOverview'],
+    queryFn: async () => {
+      const { data } = await api.get('/dashboard/assets/overview');
+      return data.data;
+    },
+  });
+}
+
+export function useTicketsByStatus() {
+  return useQuery({
+    queryKey: ['dashboard', 'ticketsByStatus'],
+    queryFn: async () => {
+      // Fetch all tickets (large limit) and group by status client-side
+      const { data } = await api.get('/tickets', { params: { limit: 500 } });
+      const tickets = data.data || [];
+      const counts: Record<string, number> = {};
+      for (const t of tickets) {
+        counts[t.status] = (counts[t.status] || 0) + 1;
+      }
+      return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    },
+  });
+}
+
+// ── Notifications ──
+export function useNotifications(params?: { limit?: number }) {
+  return useQuery({
+    queryKey: ['notifications', params],
+    queryFn: async () => {
+      const { data } = await api.get('/notifications', { params });
+      return data;
+    },
+  });
+}
+
+export function useUnreadNotificationCount() {
+  return useQuery({
+    queryKey: ['notifications', 'unreadCount'],
+    queryFn: async () => {
+      const { data } = await api.get('/notifications', { params: { limit: 1 } });
+      // Count unread from total - we get all notifications and filter
+      const allRes = await api.get('/notifications', { params: { limit: 100 } });
+      const unread = (allRes.data.data || []).filter((n: { isRead: boolean }) => !n.isRead).length;
+      return unread;
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+}
+
+// ── Profile ──
+export function useProfile() {
+  return useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const { data } = await api.get('/auth/me');
+      return data.data;
+    },
+  });
+}
+
 // ── Settings ──
 export function useUsers() {
   return useQuery({

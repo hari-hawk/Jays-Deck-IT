@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Box, TicketCheck, ShieldCheck, Activity } from 'lucide-react';
 import { MetricCard } from '@/components/dashboard/MetricCard';
@@ -8,17 +7,10 @@ import { TicketTrendChart } from '@/components/dashboard/TicketTrendChart';
 import { AssetDistribution } from '@/components/dashboard/AssetDistribution';
 import { TicketsByStatus } from '@/components/dashboard/TicketsByStatus';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
-import { QuickActions } from '@/components/dashboard/QuickActions';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { DashboardSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import {
-  mockStats,
-  mockTicketTrends,
-  mockAssetsByCategory,
-  mockTicketsByStatus,
-  mockRecentActivity,
-} from '@/lib/mock-data';
+import { useDashboardStats, useTicketTrends, useAssetOverview, useTicketsByStatus, useAuditLogs } from '@/lib/queries';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -69,19 +61,31 @@ const metricItem = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } },
 };
 
+import { QuickActions } from '@/components/dashboard/QuickActions';
+
 export default function DashboardPage() {
   const greeting = getGreeting();
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: ticketTrends, isLoading: trendsLoading } = useTicketTrends();
+  const { data: assetOverview, isLoading: assetsLoading } = useAssetOverview();
+  const { data: ticketsByStatus, isLoading: ticketsStatusLoading } = useTicketsByStatus();
+  const { data: auditLogs, isLoading: auditLoading } = useAuditLogs();
 
-  useEffect(() => {
-    // Simulate data fetch
-    const timer = setTimeout(() => setIsLoading(false), 600);
-    return () => clearTimeout(timer);
-  }, []);
+  const isLoading = statsLoading || trendsLoading || assetsLoading || ticketsStatusLoading || auditLoading;
 
   if (isLoading) {
     return <DashboardSkeleton />;
   }
+
+  // Build recent activity from audit logs
+  const recentActivity = (auditLogs || []).slice(0, 10).map((log: { id: string; action: string; entityType: string; entityId: string; user?: { firstName: string; lastName: string }; createdAt: string }) => ({
+    id: log.id,
+    action: log.action,
+    entityType: log.entityType,
+    entityId: log.entityId,
+    user: log.user ? `${log.user.firstName} ${log.user.lastName}` : 'System',
+    timestamp: log.createdAt,
+  }));
 
   return (
     <ErrorBoundary fallbackTitle="Dashboard failed to load">
@@ -122,7 +126,7 @@ export default function DashboardPage() {
             <motion.div variants={metricItem}>
               <MetricCard
                 title="Total Assets"
-                value={mockStats.totalAssets}
+                value={stats?.totalAssets ?? 0}
                 icon={Box}
                 trend={{ value: 12, isPositive: true }}
               />
@@ -130,7 +134,7 @@ export default function DashboardPage() {
             <motion.div variants={metricItem}>
               <MetricCard
                 title="Open Tickets"
-                value={mockStats.openTickets}
+                value={stats?.openTickets ?? 0}
                 icon={TicketCheck}
                 trend={{ value: 5, isPositive: false }}
               />
@@ -138,14 +142,14 @@ export default function DashboardPage() {
             <motion.div variants={metricItem}>
               <MetricCard
                 title="Pending Approvals"
-                value={mockStats.pendingApprovals}
+                value={stats?.pendingApprovals ?? 0}
                 icon={ShieldCheck}
               />
             </motion.div>
             <motion.div variants={metricItem}>
               <MetricCard
                 title="SLA Compliance"
-                value={`${mockStats.slaCompliance}%`}
+                value={`${stats?.slaCompliance ?? 0}%`}
                 icon={Activity}
                 trend={{ value: 3, isPositive: true }}
               />
@@ -182,7 +186,7 @@ export default function DashboardPage() {
                   <span style={{ color: 'var(--accent-primary)' }}>opened</span> vs{' '}
                   <span style={{ color: 'var(--success)' }}>resolved</span>
                 </p>
-                <TicketTrendChart data={mockTicketTrends} />
+                <TicketTrendChart data={ticketTrends || []} />
               </motion.div>
             </ErrorBoundary>
             <ErrorBoundary fallbackTitle="Chart failed to load">
@@ -200,7 +204,7 @@ export default function DashboardPage() {
                 >
                   By category
                 </p>
-                <AssetDistribution data={mockAssetsByCategory} />
+                <AssetDistribution data={assetOverview?.byCategory || []} />
               </motion.div>
             </ErrorBoundary>
           </motion.div>
@@ -217,7 +221,7 @@ export default function DashboardPage() {
               >
                 <SectionHeader index="04" title="TICKETS BY STATUS" />
                 <div className="mt-4">
-                  <TicketsByStatus data={mockTicketsByStatus} />
+                  <TicketsByStatus data={ticketsByStatus || []} />
                 </div>
               </motion.div>
             </ErrorBoundary>
@@ -231,7 +235,7 @@ export default function DashboardPage() {
               >
                 <SectionHeader index="05" title="RECENT ACTIVITY" />
                 <div className="mt-4">
-                  <RecentActivity data={mockRecentActivity} />
+                  <RecentActivity data={recentActivity} />
                 </div>
               </motion.div>
             </ErrorBoundary>

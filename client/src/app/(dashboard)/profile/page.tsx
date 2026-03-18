@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Save, Loader2, Lock, Monitor, Ticket } from 'lucide-react';
@@ -11,52 +11,87 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { mockAssets, mockTickets } from '@/lib/mock-data';
+import { useProfile } from '@/lib/queries';
+import { api } from '@/lib/api';
 import { toast } from 'sonner';
 
-const currentUser = {
-  firstName: 'Admin',
-  lastName: 'User',
-  email: 'admin@techjays.com',
-  phone: '+91 98765 12345',
-  department: 'IT',
-  designation: 'IT Administrator',
-  location: 'Chennai Office',
-  joinDate: '2021-01-15',
-  avatarInitials: 'AK',
-};
+interface UserAsset {
+  id: string;
+  name: string;
+  assetTag: string;
+  status: string;
+}
+
+interface UserTicket {
+  id: string;
+  ticketNumber: string;
+  title: string;
+  priority: string;
+  status: string;
+}
 
 export default function ProfilePage() {
+  const { data: profile, isLoading, error } = useProfile();
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    firstName: currentUser.firstName,
-    lastName: currentUser.lastName,
-    phone: currentUser.phone,
-  });
-  const [passwordForm, setPasswordForm] = useState({
-    current: '',
-    new: '',
-    confirm: '',
-  });
+  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '' });
+  const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
+  const [myAssets, setMyAssets] = useState<UserAsset[]>([]);
+  const [myTickets, setMyTickets] = useState<UserTicket[]>([]);
 
-  const myAssets = mockAssets.slice(0, 2);
-  const myTickets = mockTickets.slice(0, 3);
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        phone: profile.phone || '',
+      });
+      // Load user's assets and tickets
+      api.get(`/users/${profile.id}/assets`).then(res => setMyAssets(res.data.data || [])).catch(() => {});
+      api.get(`/users/${profile.id}/tickets`).then(res => setMyTickets(res.data.data || [])).catch(() => {});
+    }
+  }, [profile]);
+
+  if (isLoading) {
+    return <PageSkeleton type="list" count={1} />;
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="p-6 text-center">
+        <p style={{ color: 'var(--text-secondary)' }}>Failed to load profile. Please try again.</p>
+      </div>
+    );
+  }
+
+  const initials = `${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`;
 
   const handleSaveProfile = async () => {
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 1000));
+    try {
+      await api.put('/auth/me', form);
+      toast.success('Profile saved successfully');
+    } catch {
+      toast.error('Failed to save profile');
+    }
     setSaving(false);
-    toast.success('Profile saved successfully');
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 1000));
+    try {
+      await api.post('/auth/change-password', {
+        currentPassword: passwordForm.current,
+        newPassword: passwordForm.new,
+      });
+      setPasswordForm({ current: '', new: '', confirm: '' });
+      toast.success('Password updated successfully');
+    } catch {
+      toast.error('Failed to update password');
+    }
     setSaving(false);
-    setPasswordForm({ current: '', new: '', confirm: '' });
-    toast.success('Password updated successfully');
   };
 
   return (
@@ -76,15 +111,15 @@ export default function ProfilePage() {
                 className="text-lg font-bold"
                 style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}
               >
-                {currentUser.avatarInitials}
+                {initials}
               </AvatarFallback>
             </Avatar>
             <div>
               <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                {currentUser.firstName} {currentUser.lastName}
+                {profile.firstName} {profile.lastName}
               </h1>
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{currentUser.designation}</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{currentUser.department} &middot; {currentUser.location}</p>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{profile.designation || profile.role}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{profile.department || ''} {profile.location ? `\u00B7 ${profile.location}` : ''}</p>
             </div>
           </div>
         </motion.div>
@@ -118,52 +153,23 @@ export default function ProfilePage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="profile-first" className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>First Name</Label>
-                  <Input
-                    id="profile-first"
-                    value={form.firstName}
-                    onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                    className="h-11"
-                    style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
-                  />
+                  <Input id="profile-first" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="h-11" style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-last" className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Last Name</Label>
-                  <Input
-                    id="profile-last"
-                    value={form.lastName}
-                    onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                    className="h-11"
-                    style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
-                  />
+                  <Input id="profile-last" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="h-11" style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-email" className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Email</Label>
-                  <Input
-                    id="profile-email"
-                    value={currentUser.email}
-                    disabled
-                    className="h-11 opacity-60"
-                    style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
-                  />
+                  <Input id="profile-email" value={profile.email} disabled className="h-11 opacity-60" style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-phone" className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Phone</Label>
-                  <Input
-                    id="profile-phone"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="h-11"
-                    style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
-                  />
+                  <Input id="profile-phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-11" style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }} />
                 </div>
               </div>
               <div className="mt-6">
-                <Button
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                  className="gap-2 min-h-[44px]"
-                  style={{ background: 'var(--accent-primary)', color: '#fff' }}
-                >
+                <Button onClick={handleSaveProfile} disabled={saving} className="gap-2 min-h-[44px]" style={{ background: 'var(--accent-primary)', color: '#fff' }}>
                   {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                   {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
@@ -172,60 +178,20 @@ export default function ProfilePage() {
           </TabsContent>
 
           <TabsContent value={1} className="mt-6">
-            <motion.form
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              onSubmit={handleChangePassword}
-              className="max-w-md rounded-xl border p-6 space-y-4"
-              style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
-            >
+            <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handleChangePassword} className="max-w-md rounded-xl border p-6 space-y-4" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
               <div className="space-y-2">
                 <Label htmlFor="current-password" className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Current Password</Label>
-                <Input
-                  id="current-password"
-                  type="password"
-                  value={passwordForm.current}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
-                  className="h-11"
-                  style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
-                  required
-                  autoComplete="current-password"
-                />
+                <Input id="current-password" type="password" value={passwordForm.current} onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })} className="h-11" style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }} required autoComplete="current-password" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="new-password" className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>New Password</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  value={passwordForm.new}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
-                  className="h-11"
-                  style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                />
+                <Input id="new-password" type="password" value={passwordForm.new} onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })} className="h-11" style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }} required minLength={8} autoComplete="new-password" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm-password" className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Confirm New Password</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  value={passwordForm.confirm}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
-                  className="h-11"
-                  style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                />
+                <Input id="confirm-password" type="password" value={passwordForm.confirm} onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })} className="h-11" style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }} required minLength={8} autoComplete="new-password" />
               </div>
-              <Button
-                type="submit"
-                disabled={saving || !passwordForm.current || !passwordForm.new || passwordForm.new !== passwordForm.confirm}
-                className="gap-2 mt-2 min-h-[44px]"
-                style={{ background: 'var(--accent-primary)', color: '#fff' }}
-              >
+              <Button type="submit" disabled={saving || !passwordForm.current || !passwordForm.new || passwordForm.new !== passwordForm.confirm} className="gap-2 mt-2 min-h-[44px]" style={{ background: 'var(--accent-primary)', color: '#fff' }}>
                 {saving ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />}
                 {saving ? 'Updating...' : 'Update Password'}
               </Button>
@@ -236,10 +202,7 @@ export default function ProfilePage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
               {myAssets.map((asset) => (
                 <Link key={asset.id} href={`/assets/${asset.id}`}>
-                  <div
-                    className="flex items-center justify-between rounded-xl border p-4 transition-all hover:shadow-sm"
-                    style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
-                  >
+                  <div className="flex items-center justify-between rounded-xl border p-4 transition-all hover:shadow-sm" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
                     <div>
                       <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{asset.name}</p>
                       <p className="text-xs font-mono" style={{ color: 'var(--accent-primary)' }}>{asset.assetTag}</p>
@@ -258,13 +221,10 @@ export default function ProfilePage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
               {myTickets.map((ticket) => (
                 <Link key={ticket.id} href={`/tickets/${ticket.id}`}>
-                  <div
-                    className="flex items-center justify-between rounded-xl border p-4 transition-all hover:shadow-sm"
-                    style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
-                  >
+                  <div className="flex items-center justify-between rounded-xl border p-4 transition-all hover:shadow-sm" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
                     <div>
                       <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{ticket.title}</p>
-                      <p className="text-xs font-mono" style={{ color: 'var(--accent-primary)' }}>{ticket.ticketId}</p>
+                      <p className="text-xs font-mono" style={{ color: 'var(--accent-primary)' }}>{ticket.ticketNumber}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <StatusBadge status={ticket.priority} />

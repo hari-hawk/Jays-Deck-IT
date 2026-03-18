@@ -16,6 +16,7 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/stores/auth';
+import { useUnreadNotificationCount } from '@/lib/queries';
 
 const ROUTE_LABELS: Record<string, string> = {
   '/': 'Command Bridge',
@@ -38,6 +39,13 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
   const pathname = usePathname();
   const label = getBreadcrumbLabel(pathname);
   const logout = useAuthStore((s) => s.logout);
+  const user = useAuthStore((s) => s.user);
+  const { data: unreadCount } = useUnreadNotificationCount();
+
+  const initials = user
+    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`
+    : 'U';
+  const displayName = user ? `${user.firstName} ${user.lastName}` : 'User';
 
   return (
     <header
@@ -123,19 +131,22 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
           variant="ghost"
           size="icon"
           className="relative min-h-[44px] min-w-[44px]"
-          aria-label="Notifications (3 unread)"
+          aria-label={`Notifications (${unreadCount ?? 0} unread)`}
+          onClick={() => { window.location.href = '/notifications'; }}
         >
           <Bell className="size-5" style={{ color: 'var(--text-secondary)' }} />
-          <Badge
-            className="absolute -right-0.5 -top-0.5 flex size-5 items-center justify-center p-0 text-[10px]"
-            style={{
-              background: 'var(--accent-primary)',
-              color: 'white',
-            }}
-            aria-live="polite"
-          >
-            3
-          </Badge>
+          {(unreadCount ?? 0) > 0 && (
+            <Badge
+              className="absolute -right-0.5 -top-0.5 flex size-5 items-center justify-center p-0 text-[10px]"
+              style={{
+                background: 'var(--accent-primary)',
+                color: 'white',
+              }}
+              aria-live="polite"
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Badge>
+          )}
         </Button>
 
         {/* User avatar dropdown */}
@@ -156,12 +167,12 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
                   color: 'var(--accent-primary)',
                 }}
               >
-                AK
+                {initials}
               </AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={8}>
-            <DropdownMenuLabel>Admin User</DropdownMenuLabel>
+            <DropdownMenuLabel>{displayName}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => { window.location.href = '/profile'; }}

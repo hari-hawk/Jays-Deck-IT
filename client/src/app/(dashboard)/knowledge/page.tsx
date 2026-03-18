@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, BookOpen, Calendar, Tag } from 'lucide-react';
@@ -10,7 +10,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { mockArticles } from '@/lib/mock-data';
+import { useArticles } from '@/lib/queries';
 
 const container = {
   hidden: { opacity: 0 },
@@ -22,27 +22,50 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
 };
 
+interface Article {
+  id: string;
+  title: string;
+  category: string;
+  content: string;
+  author?: { firstName: string; lastName: string } | string;
+  createdAt: string;
+  updatedAt: string;
+  tags: string[];
+}
+
 export default function KnowledgePage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+  const { data: articles, isLoading, error } = useArticles({
+    search: search || undefined,
+    category: categoryFilter !== 'ALL' ? categoryFilter : undefined,
+  });
 
   if (isLoading) {
     return <PageSkeleton type="list" count={5} />;
   }
 
-  const categories = [...new Set(mockArticles.map((a) => a.category))];
+  if (error) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={BookOpen}
+          title="Failed to load articles"
+          description="There was an error loading the knowledge base. Please try again."
+        />
+      </div>
+    );
+  }
 
-  const filtered = mockArticles.filter((article) => {
-    const matchesSearch = !search || article.title.toLowerCase().includes(search.toLowerCase()) || article.content.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = categoryFilter === 'ALL' || article.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const filtered: Article[] = articles || [];
+  const categories = [...new Set(filtered.map((a: Article) => a.category).filter(Boolean))];
+
+  function getAuthorName(author: Article['author']): string {
+    if (!author) return 'Unknown';
+    if (typeof author === 'string') return author;
+    return `${author.firstName} ${author.lastName}`;
+  }
 
   return (
     <ErrorBoundary fallbackTitle="Know Hub failed to load">
@@ -115,7 +138,7 @@ export default function KnowledgePage() {
                           {article.title}
                         </h3>
                         <p className="mt-1 text-sm line-clamp-2" style={{ color: 'var(--text-secondary)' }}>
-                          {article.content.replace(/[#*\n]/g, ' ').trim().slice(0, 150)}...
+                          {(article.content || '').replace(/[#*\n]/g, ' ').trim().slice(0, 150)}...
                         </p>
                         <div className="mt-3 flex items-center gap-4">
                           <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
@@ -127,12 +150,12 @@ export default function KnowledgePage() {
                             {new Date(article.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
                           <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                            by {article.author}
+                            by {getAuthorName(article.author)}
                           </span>
                         </div>
                       </div>
                     </div>
-                    {article.tags.length > 0 && (
+                    {article.tags && article.tags.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {article.tags.map((tag) => (
                           <span

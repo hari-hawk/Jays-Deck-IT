@@ -11,11 +11,30 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { mockEmployees } from '@/lib/mock-data';
+import { useUsers, useSlaConfig } from '@/lib/queries';
 import { toast } from 'sonner';
 
-const mockSlaConfig = [
+interface UserItem {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string;
+  designation: string;
+  role: string;
+  status: string;
+}
+
+interface SlaItem {
+  priority: string;
+  responseTime: number;
+  resolutionTime: number;
+  unit: string;
+}
+
+const fallbackSlaConfig: SlaItem[] = [
   { priority: 'CRITICAL', responseTime: 15, resolutionTime: 120, unit: 'minutes' },
   { priority: 'HIGH', responseTime: 1, resolutionTime: 8, unit: 'hours' },
   { priority: 'MEDIUM', responseTime: 4, resolutionTime: 24, unit: 'hours' },
@@ -24,6 +43,8 @@ const mockSlaConfig = [
 
 export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
+  const { data: users, isLoading: usersLoading } = useUsers();
+  const { data: slaConfig } = useSlaConfig();
 
   const handleSave = async () => {
     setSaving(true);
@@ -31,6 +52,13 @@ export default function SettingsPage() {
     setSaving(false);
     toast.success('Configuration saved successfully');
   };
+
+  if (usersLoading) {
+    return <PageSkeleton type="list" count={6} />;
+  }
+
+  const userList: UserItem[] = users || [];
+  const slaList: SlaItem[] = slaConfig || fallbackSlaConfig;
 
   return (
     <ErrorBoundary fallbackTitle="Settings failed to load">
@@ -73,32 +101,35 @@ export default function SettingsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {mockEmployees.map((emp) => (
-                      <tr key={emp.id} className="transition-colors hover:bg-[var(--bg-tertiary)]">
-                        <td className="border-b px-4 py-3" style={{ borderColor: 'var(--border-primary)' }}>
-                          <div className="flex items-center gap-2">
-                            <Avatar size="sm">
-                              <AvatarFallback className="text-[10px] font-bold" style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}>
-                                {emp.avatarInitials}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{emp.firstName} {emp.lastName}</span>
-                          </div>
-                        </td>
-                        <td className="border-b px-4 py-3 hidden md:table-cell text-xs" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-primary)' }}>
-                          {emp.email}
-                        </td>
-                        <td className="border-b px-4 py-3 hidden lg:table-cell text-xs" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-primary)' }}>
-                          {emp.department}
-                        </td>
-                        <td className="border-b px-4 py-3 text-xs" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-primary)' }}>
-                          {emp.designation}
-                        </td>
-                        <td className="border-b px-4 py-3" style={{ borderColor: 'var(--border-primary)' }}>
-                          <StatusBadge status={emp.status} />
-                        </td>
-                      </tr>
-                    ))}
+                    {userList.map((emp) => {
+                      const initials = `${emp.firstName?.[0] || ''}${emp.lastName?.[0] || ''}`;
+                      return (
+                        <tr key={emp.id} className="transition-colors hover:bg-[var(--bg-tertiary)]">
+                          <td className="border-b px-4 py-3" style={{ borderColor: 'var(--border-primary)' }}>
+                            <div className="flex items-center gap-2">
+                              <Avatar size="sm">
+                                <AvatarFallback className="text-[10px] font-bold" style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}>
+                                  {initials}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{emp.firstName} {emp.lastName}</span>
+                            </div>
+                          </td>
+                          <td className="border-b px-4 py-3 hidden md:table-cell text-xs" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-primary)' }}>
+                            {emp.email}
+                          </td>
+                          <td className="border-b px-4 py-3 hidden lg:table-cell text-xs" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-primary)' }}>
+                            {emp.department}
+                          </td>
+                          <td className="border-b px-4 py-3 text-xs" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-primary)' }}>
+                            {emp.role}
+                          </td>
+                          <td className="border-b px-4 py-3" style={{ borderColor: 'var(--border-primary)' }}>
+                            <StatusBadge status={emp.status} />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -117,7 +148,7 @@ export default function SettingsPage() {
                   <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>SLA Targets by Priority</h3>
                 </div>
                 <div className="space-y-4">
-                  {mockSlaConfig.map((sla) => (
+                  {slaList.map((sla) => (
                     <div key={sla.priority} className="grid grid-cols-3 gap-4 items-end rounded-lg border p-4" style={{ borderColor: 'var(--border-primary)' }}>
                       <div>
                         <StatusBadge status={sla.priority} />

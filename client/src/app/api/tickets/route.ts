@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth, parsePagination, paginationMeta } from '@/lib/auth-helpers';
+import { notifyByRole } from '@/lib/notifications';
 
 function generateTicketNumber(): string {
   const now = new Date();
@@ -129,6 +130,18 @@ export async function POST(req: NextRequest) {
         assignee: { select: { id: true, firstName: true, lastName: true } },
       },
     });
+
+    // Notify all IT_ADMIN users about the new ticket
+    try {
+      await notifyByRole('IT_ADMIN', {
+        title: 'New ticket created',
+        message: `New ticket: ${data.title}`,
+        type: 'TICKET_UPDATE',
+        link: `/tickets/${ticket.id}`,
+      });
+    } catch {
+      // Notification failure should not break ticket creation
+    }
 
     return NextResponse.json({ success: true, data: ticket }, { status: 201 });
   } catch (err: unknown) {

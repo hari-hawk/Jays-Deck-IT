@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth-helpers';
+import { createNotification } from '@/lib/notifications';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -41,6 +42,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         author: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
       },
     });
+
+    // Notify the ticket reporter when someone else adds a comment
+    try {
+      if (ticket.reporterId && ticket.reporterId !== authUser.userId) {
+        await createNotification({
+          userId: ticket.reporterId,
+          title: 'New comment on your ticket',
+          message: `A comment was added to your ticket`,
+          type: 'TICKET_UPDATE',
+          link: `/tickets/${ticketId}`,
+        });
+      }
+    } catch {
+      // Notification failure should not break comment creation
+    }
 
     return NextResponse.json({ success: true, data: comment }, { status: 201 });
   } catch (err: unknown) {

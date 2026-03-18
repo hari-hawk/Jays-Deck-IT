@@ -6,12 +6,12 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, User, Tag, BookOpen } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { mockArticles } from '@/lib/mock-data';
+import { useArticle } from '@/lib/queries';
 
 /**
  * Simple markdown renderer for trusted internal content only.
- * Only renders content from the mock data / internal knowledge base.
  */
 function MarkdownLine({ line }: { line: string }) {
   function parseBold(text: string): React.ReactNode[] {
@@ -45,9 +45,13 @@ function renderMarkdown(content: string) {
 
 export default function ArticleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const article = mockArticles.find((a) => a.id === id);
+  const { data: article, isLoading, error } = useArticle(id);
 
-  if (!article) {
+  if (isLoading) {
+    return <PageSkeleton type="list" count={1} />;
+  }
+
+  if (error || !article) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <EmptyState
@@ -60,6 +64,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       </div>
     );
   }
+
+  const authorName = article.author
+    ? (typeof article.author === 'string' ? article.author : `${article.author.firstName} ${article.author.lastName}`)
+    : 'Unknown';
 
   return (
     <ErrorBoundary fallbackTitle="Article failed to load">
@@ -87,7 +95,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             </span>
             <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
               <User size={12} aria-hidden="true" />
-              {article.author}
+              {authorName}
             </span>
             <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
               <Calendar size={12} aria-hidden="true" />
@@ -96,9 +104,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Tags */}
-          {article.tags.length > 0 && (
+          {article.tags && article.tags.length > 0 && (
             <div className="mb-6 flex flex-wrap gap-1.5">
-              {article.tags.map((tag) => (
+              {article.tags.map((tag: string) => (
                 <span
                   key={tag}
                   className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
@@ -116,7 +124,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
           >
             <div className="prose-sm">
-              {renderMarkdown(article.content)}
+              {renderMarkdown(article.content || '')}
             </div>
           </div>
         </motion.article>

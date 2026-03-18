@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth, requireMinRole } from '@/lib/auth-helpers';
+import { createNotification } from '@/lib/notifications';
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -38,6 +39,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       where: { id },
       data: { status: 'RESOLVED', resolvedAt: new Date() },
     });
+
+    // Notify the ticket reporter that their ticket has been resolved
+    try {
+      if (ticket.reporterId) {
+        await createNotification({
+          userId: ticket.reporterId,
+          title: 'Ticket resolved',
+          message: `Your ticket ${ticket.ticketNumber} has been resolved`,
+          type: 'TICKET_UPDATE',
+          link: `/tickets/${id}`,
+        });
+      }
+    } catch {
+      // Notification failure should not break ticket resolution
+    }
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err: unknown) {
