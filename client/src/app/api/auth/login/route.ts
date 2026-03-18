@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { generateAccessToken, generateRefreshToken } from '@/lib/auth-helpers';
+import { parseUserAgent } from '@/lib/user-agent';
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,6 +42,23 @@ export async function POST(req: NextRequest) {
     const accessToken = generateAccessToken(tokenPayload);
     const refreshToken = generateRefreshToken(tokenPayload);
 
+    // Record login activity
+    const ua = req.headers.get('user-agent') || '';
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')
+      || 'unknown';
+    const device = parseUserAgent(ua);
+
+    prisma.loginActivity.create({
+      data: {
+        userId: user.id,
+        ipAddress: ip,
+        userAgent: ua,
+        device,
+        method: 'EMAIL',
+      },
+    }).catch(() => { /* non-blocking */ });
+
     const response = NextResponse.json({
       success: true,
       data: {
@@ -52,6 +70,7 @@ export async function POST(req: NextRequest) {
           lastName: user.lastName,
           role: user.role,
           avatarUrl: user.avatarUrl,
+          isOnboarded: user.isOnboarded,
         },
       },
     });

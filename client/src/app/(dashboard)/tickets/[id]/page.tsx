@@ -1,9 +1,9 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Send, User, Clock, Ticket } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Send, User, Clock, Ticket, Eye, Lock, UserPlus, Search, X, Loader2 } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { useTicket, useAddComment } from '@/lib/queries';
+import { useAuthStore } from '@/stores/auth';
+import { api } from '@/lib/api';
 import { toast } from 'sonner';
 
 function formatDateTime(dateStr: string) {
@@ -37,15 +39,64 @@ function formatTimeAgo(dateStr: string) {
 interface Comment {
   id: string;
   content: string;
+  isInternal: boolean;
   createdAt: string;
   author: { id: string; firstName: string; lastName: string; avatarUrl?: string };
+}
+
+interface Watcher {
+  id: string;
+  userId: string;
+  user: { id: string; firstName: string; lastName: string; email: string };
+}
+
+interface SearchUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
 }
 
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: ticket, isLoading, error } = useTicket(id);
   const addComment = useAddComment(id);
+  const currentUser = useAuthStore((s) => s.user);
   const [comment, setComment] = useState('');
+  const [isInternal, setIsInternal] = useState(false);
+  const [watchers, setWatchers] = useState<Watcher[]>([]);
+  const [showAddWatcher, setShowAddWatcher] = useState(false);
+  const [watcherSearch, setWatcherSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [optimisticComments, setOptimisticComments] = useState<Comment[]>([]);
+
+  // Load watchers
+  useEffect(() => {
+    if (id) {
+      api.get(`/tickets/${id}/watchers`).then(res => setWatchers(res.data?.data || [])).catch(() => {});
+    }
+  }, [id]);
+
+  // Scroll to bottom on new comments
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [optimisticComments, ticket?.comments]);
+
+  // Search users for watcher
+  useEffect(() => {
+    if (watcherSearch.length < 2) { setSearchResults([]); return; }
+    const timeout = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const { data } = await api.get('/users', { params: { search: watcherSearch, limit: 5 } });
+        setSearchResults(data.data || []);
+      } catch { setSearchResults([]); }
+      setSearchLoading(false);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [watcherSearch]);
 
   if (isLoading) {
     return <PageSkeleton type="list" count={1} />;
@@ -67,17 +118,50 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   const reporterName = ticket.reporter ? `${ticket.reporter.firstName} ${ticket.reporter.lastName}` : 'Unknown';
   const assigneeName = ticket.assignee ? `${ticket.assignee.firstName} ${ticket.assignee.lastName}` : 'Unassigned';
-  const comments: Comment[] = ticket.comments || [];
+  const allComments: Comment[] = [...(ticket.comments || []), ...optimisticComments];
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim()) return;
+
+    // Optimistic update
+    const tempComment: Comment = {
+      id: `temp-${Date.now()}`,
+      content: comment,
+      isInternal,
+      createdAt: new Date().toISOString(),
+      author: {
+        id: currentUser?.id || '',
+        firstName: currentUser?.firstName || '',
+        lastName: currentUser?.lastName || '',
+      },
+    };
+    setOptimisticComments((prev) => [...prev, tempComment]);
+    const commentText = comment;
+    setComment('');
+
     try {
-      await addComment.mutateAsync({ content: comment });
-      toast.success('Comment added');
-      setComment('');
+      await addComment.mutateAsync({ content: commentText, isInternal } as { content: string });
+      // After success, clear optimistic (real data will come from refetch)
+      setOptimisticComments([]);
+      toast.success(isInternal ? 'Internal note added' : 'Comment added');
     } catch {
+      setOptimisticComments((prev) => prev.filter((c) => c.id !== tempComment.id));
       toast.error('Failed to add comment');
+    }
+  };
+
+  const handleAddWatcher = async (userId: string) => {
+    try {
+      await api.post(`/tickets/${id}/watchers`, { userId });
+      // Reload watchers
+      const { data } = await api.get(`/tickets/${id}/watchers`);
+      setWatchers(data.data || []);
+      setWatcherSearch('');
+      setShowAddWatcher(false);
+      toast.success('Watcher added');
+    } catch {
+      toast.error('Failed to add watcher');
     }
   };
 
@@ -140,25 +224,35 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               </p>
             </motion.div>
 
-            {/* Comments */}
+            {/* Chat-Style Thread */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="rounded-xl border p-5"
+              className="rounded-xl border overflow-hidden"
               style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
             >
-              <h3 className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-                Comments ({comments.length})
-              </h3>
-              <div className="space-y-4">
-                {comments.length > 0 ? (
-                  comments.map((c) => {
+              <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border-primary)' }}>
+                <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                  Thread ({allComments.length})
+                </h3>
+              </div>
+
+              {/* Messages */}
+              <div className="p-4 space-y-4 max-h-[480px] overflow-y-auto">
+                {allComments.length > 0 ? (
+                  allComments.map((c) => {
+                    const isOwnMessage = c.author?.id === currentUser?.id;
                     const authorName = c.author ? `${c.author.firstName} ${c.author.lastName}` : 'Unknown';
                     const authorInitials = c.author ? `${c.author.firstName[0]}${c.author.lastName[0]}` : '?';
                     return (
-                      <div key={c.id} className="flex gap-3">
-                        <Avatar size="sm">
+                      <motion.div
+                        key={c.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`flex gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
+                      >
+                        <Avatar size="sm" className="shrink-0">
                           <AvatarFallback
                             className="text-[10px] font-bold"
                             style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}
@@ -166,47 +260,96 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                             {authorInitials}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{authorName}</span>
-                            <span className="text-xs" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                        <div className={`max-w-[75%] ${isOwnMessage ? 'text-right' : ''}`}>
+                          <div className={`flex items-center gap-2 mb-1 ${isOwnMessage ? 'justify-end' : ''}`}>
+                            <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{authorName}</span>
+                            <span className="text-[10px]" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
                               {formatTimeAgo(c.createdAt)}
                             </span>
                           </div>
-                          <p className="mt-1 text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                          <div
+                            className="rounded-xl px-4 py-2.5 text-sm leading-relaxed"
+                            style={{
+                              background: c.isInternal
+                                ? 'rgba(251, 191, 36, 0.1)'
+                                : isOwnMessage
+                                  ? 'var(--accent-primary)'
+                                  : 'var(--bg-tertiary)',
+                              color: c.isInternal
+                                ? 'var(--text-primary)'
+                                : isOwnMessage
+                                  ? '#fff'
+                                  : 'var(--text-primary)',
+                              border: c.isInternal ? '1px solid rgba(251, 191, 36, 0.25)' : 'none',
+                            }}
+                          >
+                            {c.isInternal && (
+                              <div className="flex items-center gap-1 mb-1">
+                                <Lock className="size-3" style={{ color: '#f59e0b' }} />
+                                <span className="text-[10px] font-semibold uppercase" style={{ color: '#f59e0b' }}>
+                                  Internal Note
+                                </span>
+                              </div>
+                            )}
                             {c.content}
-                          </p>
+                          </div>
                         </div>
-                      </div>
+                      </motion.div>
                     );
                   })
                 ) : (
-                  <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No comments yet.</p>
+                  <p className="text-sm text-center py-8" style={{ color: 'var(--text-tertiary)' }}>No messages yet. Start the conversation below.</p>
                 )}
+                <div ref={chatEndRef} />
               </div>
 
-              {/* Add Comment */}
-              <form onSubmit={handleSubmitComment} className="mt-6 flex gap-2">
-                <label htmlFor="add-comment" className="sr-only">Add a comment</label>
-                <input
-                  id="add-comment"
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Add a comment..."
-                  className="flex-1 rounded-lg border px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-                  style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
-                />
-                <Button
-                  type="submit"
-                  size="icon"
-                  disabled={!comment.trim() || addComment.isPending}
-                  className="min-h-[44px] min-w-[44px]"
-                  style={{ background: 'var(--accent-primary)', color: '#fff' }}
-                  aria-label="Send comment"
-                >
-                  <Send className="size-4" />
-                </Button>
-              </form>
+              {/* Chat Input */}
+              <div className="border-t p-4" style={{ borderColor: 'var(--border-primary)' }}>
+                {/* Internal note toggle */}
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsInternal(!isInternal)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors min-h-[32px]"
+                    style={{
+                      background: isInternal ? 'rgba(251, 191, 36, 0.15)' : 'var(--bg-tertiary)',
+                      color: isInternal ? '#f59e0b' : 'var(--text-secondary)',
+                      border: isInternal ? '1px solid rgba(251, 191, 36, 0.25)' : '1px solid var(--border-primary)',
+                    }}
+                    aria-pressed={isInternal}
+                  >
+                    <Lock className="size-3" />
+                    {isInternal ? 'Internal Note' : 'Public Comment'}
+                  </button>
+                  {isInternal && (
+                    <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
+                      Only visible to staff
+                    </span>
+                  )}
+                </div>
+
+                <form onSubmit={handleSubmitComment} className="flex gap-2">
+                  <label htmlFor="add-comment" className="sr-only">Add a message</label>
+                  <input
+                    id="add-comment"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder={isInternal ? 'Add an internal note...' : 'Type a message...'}
+                    className="flex-1 rounded-lg border px-3 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                    style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+                  />
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={!comment.trim() || addComment.isPending}
+                    className="min-h-[44px] min-w-[44px]"
+                    style={{ background: 'var(--accent-primary)', color: '#fff' }}
+                    aria-label="Send message"
+                  >
+                    <Send className="size-4" />
+                  </Button>
+                </form>
+              </div>
             </motion.div>
           </div>
 
@@ -226,6 +369,94 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <DetailRow icon={User} label="Assignee" value={assigneeName} />
                 <DetailRow icon={Clock} label="Created" value={formatDateTime(ticket.createdAt)} />
                 <DetailRow icon={Clock} label="Updated" value={formatDateTime(ticket.updatedAt)} />
+              </div>
+            </div>
+
+            {/* Watchers / People in Loop */}
+            <div className="rounded-xl border p-5" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                  <Eye className="size-3 inline mr-1" aria-hidden="true" />
+                  People in Loop
+                </h3>
+                <button
+                  onClick={() => setShowAddWatcher(!showAddWatcher)}
+                  className="flex items-center gap-1 text-xs font-medium min-h-[32px] px-2 rounded-md transition-colors"
+                  style={{ color: 'var(--accent-primary)' }}
+                >
+                  <UserPlus className="size-3" />
+                  Add
+                </button>
+              </div>
+
+              <AnimatePresence>
+                {showAddWatcher && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mb-3 overflow-hidden"
+                  >
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5" style={{ color: 'var(--text-tertiary)' }} />
+                      <input
+                        value={watcherSearch}
+                        onChange={(e) => setWatcherSearch(e.target.value)}
+                        placeholder="Search by name or email..."
+                        className="w-full rounded-lg border pl-8 pr-3 py-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                        style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+                      />
+                    </div>
+                    {searchLoading && (
+                      <div className="flex items-center justify-center py-2">
+                        <Loader2 className="size-4 animate-spin" style={{ color: 'var(--text-tertiary)' }} />
+                      </div>
+                    )}
+                    {searchResults.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {searchResults
+                          .filter((u) => !watchers.some((w) => w.userId === u.id))
+                          .map((u) => (
+                            <button
+                              key={u.id}
+                              onClick={() => handleAddWatcher(u.id)}
+                              className="flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-left transition-colors min-h-[36px]"
+                              style={{ color: 'var(--text-primary)' }}
+                            >
+                              <Avatar size="sm">
+                                <AvatarFallback className="text-[10px]" style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}>
+                                  {u.firstName[0]}{u.lastName[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-xs font-medium">{u.firstName} {u.lastName}</p>
+                                <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{u.email}</p>
+                              </div>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="space-y-2">
+                {watchers.map((w) => (
+                  <div key={w.id} className="flex items-center gap-2">
+                    <Avatar size="sm">
+                      <AvatarFallback className="text-[10px]" style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}>
+                        {w.user.firstName[0]}{w.user.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>{w.user.firstName} {w.user.lastName}</p>
+                      <p className="text-[10px] truncate" style={{ color: 'var(--text-tertiary)' }}>{w.user.email}</p>
+                    </div>
+                  </div>
+                ))}
+                {watchers.length === 0 && (
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>No watchers yet.</p>
+                )}
               </div>
             </div>
 

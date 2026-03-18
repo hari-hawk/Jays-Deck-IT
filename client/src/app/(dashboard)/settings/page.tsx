@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
+import { RoleGuard } from '@/components/layout/RoleGuard';
 import { useUsers, useSlaConfig } from '@/lib/queries';
 import { toast } from 'sonner';
 
@@ -61,6 +62,7 @@ export default function SettingsPage() {
   const slaList: SlaItem[] = slaConfig || fallbackSlaConfig;
 
   return (
+    <RoleGuard allowedRoles={['SUPER_ADMIN', 'IT_ADMIN']}>
     <ErrorBoundary fallbackTitle="Settings failed to load">
       <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
@@ -200,5 +202,6 @@ export default function SettingsPage() {
       </div>
       </PageTransition>
     </ErrorBoundary>
+    </RoleGuard>
   );
 }

@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
+import { RoleGuard } from '@/components/layout/RoleGuard';
 import { useAuditLogs } from '@/lib/queries';
 
 const ACTION_CONFIG: Record<string, { icon: LucideIcon; color: string }> = {
@@ -79,6 +80,7 @@ export default function AuditPage() {
   });
 
   return (
+    <RoleGuard allowedRoles={['SUPER_ADMIN', 'IT_ADMIN']}>
     <ErrorBoundary fallbackTitle="Audit Trail failed to load">
       <PageTransition>
       <div className="space-y-6 p-6 md:p-8">
@@ -211,5 +213,6 @@ export default function AuditPage() {
       </div>
       </PageTransition>
     </ErrorBoundary>
+    </RoleGuard>
   );
 }

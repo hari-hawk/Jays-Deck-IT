@@ -8,6 +8,7 @@ interface User {
   lastName: string;
   role: string;
   avatarUrl: string | null;
+  isOnboarded?: boolean;
 }
 
 interface AuthState {
@@ -58,3 +59,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setUser: (user) => set({ user, isAuthenticated: !!user }),
 }));
+
+// ── Role helpers ──────────────────────────────────────
+export const useRole = () => useAuthStore((s) => s.user?.role);
+export const isAdmin = (role?: string) => role === 'SUPER_ADMIN' || role === 'IT_ADMIN';
+export const isManager = (role?: string) => role === 'MANAGER';
+export const isEmployee = (role?: string) => role === 'EMPLOYEE';

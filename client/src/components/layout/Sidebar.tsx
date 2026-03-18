@@ -14,6 +14,7 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import { useSidebarStore } from '@/stores/sidebar';
+import { useAuthStore, isAdmin, isManager } from '@/stores/auth';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -25,14 +26,42 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
-const NAV_ITEMS = [
+interface NavItemDef {
+  section: string;
+  label: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+}
+
+const ALL_NAV_ITEMS: NavItemDef[] = [
   { section: '00', label: 'COMMAND BRIDGE', href: '/', icon: LayoutDashboard },
   { section: '01', label: 'ASSET VAULT', href: '/assets', icon: Monitor },
   { section: '02', label: 'PEOPLE LINK', href: '/employees', icon: Users },
   { section: '03', label: 'SERVICE HUB', href: '/tickets', icon: Ticket },
   { section: '04', label: 'KNOW HUB', href: '/knowledge', icon: BookOpen },
   { section: '05', label: 'AUDIT TRAIL', href: '/audit', icon: ScrollText },
-] as const;
+];
+
+function getNavItemsForRole(role?: string): NavItemDef[] {
+  if (isAdmin(role)) {
+    // Full access
+    return ALL_NAV_ITEMS;
+  }
+  if (isManager(role)) {
+    // No Audit Trail, no Settings
+    return ALL_NAV_ITEMS.filter((item) =>
+      ['/', '/assets', '/employees', '/tickets', '/knowledge'].includes(item.href)
+    );
+  }
+  // EMPLOYEE: Dashboard, My Assets (assets), Service Hub, Know Hub
+  return ALL_NAV_ITEMS.filter((item) =>
+    ['/', '/assets', '/tickets', '/knowledge'].includes(item.href)
+  );
+}
+
+function shouldShowSettings(role?: string): boolean {
+  return isAdmin(role);
+}
 
 const SIDEBAR_WIDTH = 280;
 const SIDEBAR_COLLAPSED_WIDTH = 72;
@@ -47,7 +76,7 @@ function NavItem({
   isActive,
   isCollapsed,
 }: {
-  item: (typeof NAV_ITEMS)[number];
+  item: NavItemDef;
   isActive: boolean;
   isCollapsed: boolean;
 }) {
@@ -137,6 +166,14 @@ function NavItem({
 export function Sidebar() {
   const { isCollapsed, toggle } = useSidebarStore();
   const pathname = usePathname();
+  const user = useAuthStore((s) => s.user);
+  const role = user?.role;
+  const navItems = getNavItemsForRole(role);
+  const showSettings = shouldShowSettings(role);
+
+  const displayName = user ? `${user.firstName} ${user.lastName}` : 'User';
+  const initials = user ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}` : 'U';
+  const roleLabel = role?.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'User';
 
   return (
     <TooltipProvider>
@@ -208,7 +245,7 @@ export function Sidebar() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="flex flex-col gap-1" role="list">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const isActive =
                 item.href === '/'
                   ? pathname === '/'
@@ -226,46 +263,48 @@ export function Sidebar() {
           </ul>
         </nav>
 
-        {/* Settings */}
-        <div className="px-3 py-1">
-          {isCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger render={<div />}>
-                <Link
-                  href="/settings"
-                  className={cn(
-                    'flex items-center justify-center rounded-md py-2.5 text-sm font-medium transition-colors',
-                    'min-h-[44px] min-w-[44px]',
-                    'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
-                    'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
-                    pathname === '/settings' && 'text-[var(--text-primary)]'
-                  )}
-                  aria-current={pathname === '/settings' ? 'page' : undefined}
-                >
-                  <Settings className="size-5" />
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8}>
-                Settings
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Link
-              href="/settings"
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
-                'min-h-[44px]',
-                'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
-                'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
-                pathname === '/settings' && 'text-[var(--text-primary)]'
-              )}
-              aria-current={pathname === '/settings' ? 'page' : undefined}
-            >
-              <Settings className="size-5" />
-              <span className="text-xs uppercase tracking-wider">Settings</span>
-            </Link>
-          )}
-        </div>
+        {/* Settings - only for admins */}
+        {showSettings && (
+          <div className="px-3 py-1">
+            {isCollapsed ? (
+              <Tooltip>
+                <TooltipTrigger render={<div />}>
+                  <Link
+                    href="/settings"
+                    className={cn(
+                      'flex items-center justify-center rounded-md py-2.5 text-sm font-medium transition-colors',
+                      'min-h-[44px] min-w-[44px]',
+                      'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
+                      'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
+                      pathname === '/settings' && 'text-[var(--text-primary)]'
+                    )}
+                    aria-current={pathname === '/settings' ? 'page' : undefined}
+                  >
+                    <Settings className="size-5" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  Settings
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Link
+                href="/settings"
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
+                  'min-h-[44px]',
+                  'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
+                  'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
+                  pathname === '/settings' && 'text-[var(--text-primary)]'
+                )}
+                aria-current={pathname === '/settings' ? 'page' : undefined}
+              >
+                <Settings className="size-5" />
+                <span className="text-xs uppercase tracking-wider">Settings</span>
+              </Link>
+            )}
+          </div>
+        )}
 
         <Separator className="mx-3" style={{ background: 'var(--border-primary)' }} />
 
@@ -293,7 +332,7 @@ export function Sidebar() {
                   color: 'var(--accent-primary)',
                 }}
               >
-                HV
+                {initials}
               </AvatarFallback>
             </Avatar>
             <AnimatePresence mode="wait">
@@ -309,13 +348,13 @@ export function Sidebar() {
                     className="truncate text-sm font-medium whitespace-nowrap"
                     style={{ color: 'var(--text-primary)' }}
                   >
-                    Hari Verman
+                    {displayName}
                   </span>
                   <span
                     className="truncate text-xs whitespace-nowrap"
                     style={{ color: 'var(--text-tertiary)' }}
                   >
-                    Super Admin
+                    {roleLabel}
                   </span>
                 </motion.div>
               )}

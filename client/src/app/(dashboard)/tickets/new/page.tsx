@@ -1,15 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, X, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { api } from '@/lib/api';
 import { toast } from 'sonner';
+
+interface CCUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
 
 export default function NewTicketPage() {
   const router = useRouter();
@@ -20,6 +29,20 @@ export default function NewTicketPage() {
     category: 'General IT',
     priority: 'MEDIUM',
   });
+  const [ccUsers, setCcUsers] = useState<CCUser[]>([]);
+  const [ccSearch, setCcSearch] = useState('');
+  const [ccResults, setCcResults] = useState<CCUser[]>([]);
+
+  useEffect(() => {
+    if (ccSearch.length < 2) { setCcResults([]); return; }
+    const timeout = setTimeout(async () => {
+      try {
+        const { data } = await api.get('/users', { params: { search: ccSearch, limit: 5 } });
+        setCcResults((data.data || []).filter((u: CCUser) => !ccUsers.some((cc) => cc.id === u.id)));
+      } catch { setCcResults([]); }
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [ccSearch, ccUsers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,6 +169,71 @@ export default function NewTicketPage() {
                 <option value="CRITICAL">Critical</option>
               </select>
             </div>
+          </div>
+
+          {/* CC / Add People */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="cc-search"
+              className="text-xs uppercase tracking-wider"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              CC / Add People (Optional)
+            </Label>
+            {ccUsers.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {ccUsers.map((u) => (
+                  <span
+                    key={u.id}
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs"
+                    style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}
+                  >
+                    {u.firstName} {u.lastName}
+                    <button
+                      type="button"
+                      onClick={() => setCcUsers(ccUsers.filter((cc) => cc.id !== u.id))}
+                      className="ml-0.5 hover:opacity-70"
+                      aria-label={`Remove ${u.firstName} ${u.lastName}`}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4" style={{ color: 'var(--text-tertiary)' }} />
+              <Input
+                id="cc-search"
+                placeholder="Search people by name or email..."
+                value={ccSearch}
+                onChange={(e) => setCcSearch(e.target.value)}
+                className="h-11 pl-9"
+                style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+              />
+            </div>
+            {ccResults.length > 0 && (
+              <div className="rounded-lg border p-1 space-y-0.5" style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)' }}>
+                {ccResults.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => { setCcUsers([...ccUsers, u]); setCcSearch(''); }}
+                    className="flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-[var(--bg-secondary)] min-h-[36px]"
+                  >
+                    <Avatar size="sm">
+                      <AvatarFallback className="text-[10px]" style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}>
+                        {u.firstName[0]}{u.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{u.firstName} {u.lastName}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{u.email}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3 pt-2">

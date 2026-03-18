@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Save, Loader2, Lock, Monitor, Ticket } from 'lucide-react';
+import { Save, Loader2, Lock, Monitor, Ticket, Shield, Smartphone } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,15 @@ interface UserTicket {
   status: string;
 }
 
+interface LoginActivityItem {
+  id: string;
+  loginAt: string;
+  ipAddress: string | null;
+  device: string | null;
+  method: string;
+  location: string | null;
+}
+
 export default function ProfilePage() {
   const { data: profile, isLoading, error } = useProfile();
   const [saving, setSaving] = useState(false);
@@ -39,6 +48,7 @@ export default function ProfilePage() {
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
   const [myAssets, setMyAssets] = useState<UserAsset[]>([]);
   const [myTickets, setMyTickets] = useState<UserTicket[]>([]);
+  const [loginActivity, setLoginActivity] = useState<LoginActivityItem[]>([]);
 
   useEffect(() => {
     if (profile) {
@@ -47,9 +57,10 @@ export default function ProfilePage() {
         lastName: profile.lastName || '',
         phone: profile.phone || '',
       });
-      // Load user's assets and tickets
+      // Load user's assets, tickets, and login activity
       api.get(`/users/${profile.id}/assets`).then(res => setMyAssets(res.data.data || [])).catch(() => {});
       api.get(`/users/${profile.id}/tickets`).then(res => setMyTickets(res.data.data || [])).catch(() => {});
+      api.get('/auth/login-activity').then(res => setLoginActivity(res.data.data || [])).catch(() => {});
     }
   }, [profile]);
 
@@ -140,6 +151,10 @@ export default function ProfilePage() {
             <TabsTrigger value={3} className="rounded-none px-4 py-2.5 text-sm min-h-[44px] shrink-0" style={{ color: 'var(--text-secondary)' }}>
               <Ticket className="size-4 mr-2" aria-hidden="true" />
               My Tickets
+            </TabsTrigger>
+            <TabsTrigger value={4} className="rounded-none px-4 py-2.5 text-sm min-h-[44px] shrink-0" style={{ color: 'var(--text-secondary)' }}>
+              <Shield className="size-4 mr-2" aria-hidden="true" />
+              Login Activity
             </TabsTrigger>
           </TabsList>
 
@@ -236,6 +251,69 @@ export default function ProfilePage() {
               {myTickets.length === 0 && (
                 <p className="py-8 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>No tickets found.</p>
               )}
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value={4} className="mt-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+              <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
+                <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-primary)' }}>
+                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Recent Login Activity</h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>Last 10 sign-in sessions</p>
+                </div>
+                {loginActivity.slice(0, 10).map((activity, idx) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0"
+                    style={{ borderColor: 'var(--border-primary)' }}
+                  >
+                    <div
+                      className="flex size-9 shrink-0 items-center justify-center rounded-lg"
+                      style={{ background: 'var(--accent-primary-subtle)' }}
+                    >
+                      <Smartphone className="size-4" style={{ color: 'var(--accent-primary)' }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                          {activity.device || 'Unknown device'}
+                        </p>
+                        {idx === 0 && (
+                          <span
+                            className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
+                            style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e' }}
+                          >
+                            Active now
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                          {new Date(activity.loginAt).toLocaleString()}
+                        </span>
+                        {activity.ipAddress && (
+                          <>
+                            <span style={{ color: 'var(--text-tertiary)' }}>&middot;</span>
+                            <span className="text-xs font-mono" style={{ color: 'var(--text-tertiary)' }}>
+                              {activity.ipAddress}
+                            </span>
+                          </>
+                        )}
+                        <span style={{ color: 'var(--text-tertiary)' }}>&middot;</span>
+                        <span
+                          className="text-[10px] font-mono uppercase rounded px-1.5 py-0.5"
+                          style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+                        >
+                          {activity.method}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {loginActivity.length === 0 && (
+                  <p className="py-8 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>No login activity recorded yet.</p>
+                )}
+              </div>
             </motion.div>
           </TabsContent>
         </Tabs>

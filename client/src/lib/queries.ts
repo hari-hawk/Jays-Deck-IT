@@ -74,7 +74,7 @@ export function useCreateTicket() {
 export function useAddComment(ticketId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { content: string }) => {
+    mutationFn: async (payload: { content: string; isInternal?: boolean }) => {
       const { data } = await api.post(`/tickets/${ticketId}/comments`, payload);
       return data.data;
     },

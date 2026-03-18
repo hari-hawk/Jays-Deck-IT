@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
         id: true, email: true, firstName: true, lastName: true,
         avatarUrl: true, role: true, department: true, designation: true,
         employeeId: true, phone: true, location: true, dateOfJoining: true, status: true,
+        isOnboarded: true, authProvider: true,
       },
     });
 

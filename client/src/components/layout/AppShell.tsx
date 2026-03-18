@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import {
@@ -9,9 +10,20 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Toaster } from 'sonner';
+import { useAuthStore } from '@/stores/auth';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  // Redirect to onboarding if user is authenticated but not onboarded
+  React.useEffect(() => {
+    if (isAuthenticated && user && user.isOnboarded === false) {
+      router.replace('/onboarding');
+    }
+  }, [isAuthenticated, user, router]);
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>

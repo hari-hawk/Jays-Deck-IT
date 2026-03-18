@@ -8,6 +8,12 @@ datasource db {
 
 // ─── ENUMS ──────────────────────────────────────────
 
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  MICROSOFT
+}
+
 enum Role {
   SUPER_ADMIN
   IT_ADMIN
@@ -152,6 +158,13 @@ model User {
   dateOfJoining DateTime?
   status       UserStatus @default(ACTIVE)
 
+  // SSO fields
+  authProvider   AuthProvider @default(EMAIL)
+  authProviderId String?
+
+  // Onboarding
+  isOnboarded Boolean @default(false)
+
   managerId String?
   manager   User?   @relation("ManagerSubordinates", fields: [managerId], references: [id])
   subordinates User[] @relation("ManagerSubordinates")
@@ -170,6 +183,8 @@ model User {
   knowledgeArticles   KnowledgeArticle[]
   notifications       Notification[]
   auditLogs           AuditLog[]
+  loginActivities     LoginActivity[]
+  watchedTickets      TicketWatcher[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -304,6 +319,7 @@ model Ticket {
 
   comments    TicketComment[]
   attachments TicketAttachment[]
+  watchers    TicketWatcher[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -410,4 +426,30 @@ model Setting {
   updatedAt DateTime @updatedAt
 
   @@index([key])
+}
+
+model LoginActivity {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  loginAt   DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+  device    String?
+  location  String?
+  method    String   @default("EMAIL")
+
+  @@index([userId, loginAt])
+}
+
+model TicketWatcher {
+  id       String   @id @default(uuid())
+  ticketId String
+  ticket   Ticket   @relation(fields: [ticketId], references: [id])
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+  addedAt  DateTime @default(now())
+
+  @@unique([ticketId, userId])
+  @@index([ticketId])
 }
