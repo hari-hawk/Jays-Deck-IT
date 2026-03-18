@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Save, Loader2, Lock, Monitor, Ticket, Shield, Smartphone } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Save, Loader2, Lock, Monitor, Ticket, Shield, Smartphone, LogOut } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { PageSkeleton } from '@/components/ui/skeleton-loaders';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { useProfile } from '@/lib/queries';
+import { useAuthStore } from '@/stores/auth';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -42,8 +44,11 @@ interface LoginActivityItem {
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { data: profile, isLoading, error } = useProfile();
+  const logout = useAuthStore((s) => s.logout);
   const [saving, setSaving] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [form, setForm] = useState({ firstName: '', lastName: '', phone: '' });
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
   const [myAssets, setMyAssets] = useState<UserAsset[]>([]);
@@ -77,6 +82,17 @@ export default function ProfilePage() {
   }
 
   const initials = `${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`;
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+      router.replace('/login');
+    } catch {
+      toast.error('Failed to logout');
+      setLoggingOut(false);
+    }
+  };
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -116,22 +132,38 @@ export default function ProfilePage() {
           className="rounded-xl border p-6"
           style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
         >
-          <div className="flex items-center gap-4">
-            <Avatar className="size-16">
-              <AvatarFallback
-                className="text-lg font-bold"
-                style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}
-              >
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                {profile.firstName} {profile.lastName}
-              </h1>
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{profile.designation || profile.role}</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{profile.department || ''} {profile.location ? `\u00B7 ${profile.location}` : ''}</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar className="size-16">
+                <AvatarFallback
+                  className="text-lg font-bold"
+                  style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}
+                >
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                  {profile.firstName} {profile.lastName}
+                </h1>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{profile.designation || profile.role}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{profile.department || ''} {profile.location ? `\u00B7 ${profile.location}` : ''}</p>
+              </div>
             </div>
+            <Button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              variant="outline"
+              className="gap-2 min-h-[44px] cursor-pointer"
+              style={{
+                borderColor: 'var(--danger)',
+                color: 'var(--danger)',
+                background: 'var(--danger-subtle)',
+              }}
+            >
+              {loggingOut ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
+              {loggingOut ? 'Signing out...' : 'Sign Out'}
+            </Button>
           </div>
         </motion.div>
 

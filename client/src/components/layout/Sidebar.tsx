@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -12,6 +12,7 @@ import {
   ScrollText,
   Settings,
   ChevronLeft,
+  LogOut,
 } from 'lucide-react';
 import { useSidebarStore } from '@/stores/sidebar';
 import { useAuthStore, isAdmin, isManager } from '@/stores/auth';
@@ -164,9 +165,11 @@ function NavItem({
 }
 
 export function Sidebar() {
+  const router = useRouter();
   const { isCollapsed, toggle } = useSidebarStore();
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const role = user?.role;
   const navItems = getNavItemsForRole(role);
   const showSettings = shouldShowSettings(role);
@@ -319,11 +322,11 @@ export function Sidebar() {
         <div
           className={cn(
             'flex shrink-0 items-center gap-3 p-4 transition-all duration-200 rounded-lg mx-1 mb-1',
-            isCollapsed && 'justify-center px-0 py-4',
+            isCollapsed && 'flex-col justify-center px-0 py-3 gap-2',
             'hover-glow'
           )}
         >
-          <Link href="/profile" className="flex items-center gap-3 min-w-0">
+          <Link href="/profile" className={cn('flex items-center gap-3 min-w-0 flex-1', isCollapsed && 'flex-col')}>
             <Avatar size="default">
               <AvatarFallback
                 className="text-xs font-bold"
@@ -360,6 +363,40 @@ export function Sidebar() {
               )}
             </AnimatePresence>
           </Link>
+          {/* Logout button */}
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger render={<div />}>
+                <button
+                  onClick={async () => { await logout(); router.replace('/login'); }}
+                  className={cn(
+                    'flex items-center justify-center rounded-md min-h-[36px] min-w-[36px] transition-colors',
+                    'text-[var(--text-tertiary)] hover:text-[var(--danger)] hover:bg-[var(--danger-subtle)]',
+                    'outline-none focus-visible:ring-2 focus-visible:ring-[var(--danger)]',
+                  )}
+                  aria-label="Sign out"
+                >
+                  <LogOut className="size-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                Sign out
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={async () => { await logout(); router.replace('/login'); }}
+              className={cn(
+                'flex items-center justify-center rounded-md min-h-[36px] min-w-[36px] transition-colors',
+                'text-[var(--text-tertiary)] hover:text-[var(--danger)] hover:bg-[var(--danger-subtle)]',
+                'outline-none focus-visible:ring-2 focus-visible:ring-[var(--danger)]',
+              )}
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              <LogOut className="size-4" />
+            </button>
+          )}
         </div>
       </motion.aside>
     </TooltipProvider>
