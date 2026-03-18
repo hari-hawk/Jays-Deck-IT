@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod/v4';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -83,12 +83,26 @@ const credCardItem = {
 };
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
+        <Loader2 className="size-8 animate-spin" style={{ color: 'var(--accent-primary)' }} />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const router = useRouter();
-  const { login, isAuthenticated, isLoading: authLoading } = useAuthStore();
+  const searchParams = useSearchParams();
+  const { login, isAuthenticated, isLoading: authLoading, fetchProfile } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTestPanel, setShowTestPanel] = useState(true);
+  const [ssoLoading, setSsoLoading] = useState(false);
 
   const {
     register,
@@ -103,11 +117,38 @@ export default function LoginPage() {
     },
   });
 
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+  // Handle SSO callback — token or error from OAuth redirect
+  const handleSsoCallback = useCallback(async () => {
+    const ssoToken = searchParams.get('sso_token');
+    const ssoError = searchParams.get('sso_error');
+
+    if (ssoError) {
+      setLoginError(ssoError);
+      // Clean URL without reloading
+      window.history.replaceState({}, '', '/login');
+      return;
+    }
+
+    if (ssoToken) {
+      setSsoLoading(true);
+      localStorage.setItem('accessToken', ssoToken);
+      // Clean URL
+      window.history.replaceState({}, '', '/login');
+      // Fetch user profile with the new token
+      await fetchProfile();
       router.replace('/');
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [searchParams, fetchProfile, router]);
+
+  useEffect(() => {
+    handleSsoCallback();
+  }, [handleSsoCallback]);
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && !ssoLoading) {
+      router.replace('/');
+    }
+  }, [authLoading, isAuthenticated, router, ssoLoading]);
 
   const onSubmit = async (formData: LoginFormData) => {
     setLoginError(null);
@@ -138,6 +179,22 @@ export default function LoginPage() {
     setValue('email', email);
     setValue('password', password);
     setLoginError(null);
+  };
+
+  const quickLogin = async (email: string, password: string) => {
+    setLoginError(null);
+    setIsSubmitting(true);
+    try {
+      await login(email, password);
+      router.replace('/');
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      setLoginError(
+        axiosError.response?.data?.message || 'Invalid credentials. Please try again.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -191,38 +248,54 @@ export default function LoginPage() {
               <div className="space-y-3 mb-6">
                 <button
                   type="button"
-                  onClick={() => toast.info('Google SSO will be enabled soon. Please use email/password to login.')}
-                  className="flex w-full items-center justify-center gap-3 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all hover:brightness-95 active:scale-[0.98] min-h-[44px]"
+                  disabled={ssoLoading}
+                  onClick={() => {
+                    setSsoLoading(true);
+                    window.location.href = '/api/auth/google';
+                  }}
+                  className="flex w-full items-center justify-center gap-3 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all hover:brightness-95 active:scale-[0.98] min-h-[44px] disabled:opacity-60"
                   style={{
                     background: '#ffffff',
                     borderColor: '#dadce0',
                     color: '#3c4043',
                   }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                  </svg>
+                  {ssoLoading ? (
+                    <Loader2 className="size-4 animate-spin" style={{ color: '#4285F4' }} />
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                  )}
                   Sign in with Google
                 </button>
                 <button
                   type="button"
-                  onClick={() => toast.info('Microsoft SSO will be enabled soon. Please use email/password to login.')}
-                  className="flex w-full items-center justify-center gap-3 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all hover:brightness-95 active:scale-[0.98] min-h-[44px]"
+                  disabled={ssoLoading}
+                  onClick={() => {
+                    setSsoLoading(true);
+                    window.location.href = '/api/auth/microsoft';
+                  }}
+                  className="flex w-full items-center justify-center gap-3 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all hover:brightness-95 active:scale-[0.98] min-h-[44px] disabled:opacity-60"
                   style={{
                     background: '#ffffff',
                     borderColor: '#dadce0',
                     color: '#3c4043',
                   }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true">
-                    <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-                    <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-                    <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-                    <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-                  </svg>
+                  {ssoLoading ? (
+                    <Loader2 className="size-4 animate-spin" style={{ color: '#00A4EF' }} />
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true">
+                      <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+                      <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+                      <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+                      <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+                    </svg>
+                  )}
                   Sign in with Microsoft
                 </button>
               </div>
@@ -444,7 +517,7 @@ export default function LoginPage() {
                   className="mt-4 space-y-3"
                 >
                   <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                    Click any role to auto-fill login credentials. All passwords: <code className="font-mono px-1 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)' }}>JaysDeck2024!</code>
+                    Click any role to instantly sign in. All passwords: <code className="font-mono px-1 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)' }}>JaysDeck2024!</code>
                   </p>
 
                   {TEST_CREDENTIALS.map((cred) => {
@@ -453,8 +526,9 @@ export default function LoginPage() {
                       <motion.button
                         key={cred.role}
                         variants={credCardItem}
-                        onClick={() => fillCredentials(cred.email, cred.password)}
-                        className="flex w-full items-start gap-3 rounded-lg p-3 text-left transition-all min-h-[44px]"
+                        disabled={isSubmitting}
+                        onClick={() => quickLogin(cred.email, cred.password)}
+                        className="flex w-full items-start gap-3 rounded-lg p-3 text-left transition-all min-h-[44px] disabled:opacity-60"
                         style={{
                           background: 'var(--bg-secondary)',
                           border: '1px solid var(--border-primary)',
